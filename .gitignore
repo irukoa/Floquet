@@ -1,0 +1,3 @@
+**/*.mod
+*.dat
+!material_data/BC2N_tb.dat
