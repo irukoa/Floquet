@@ -17,22 +17,10 @@ where $q$ is the particle charge and $r^j$ is the position operator of the syste
 The time evolution operator is defined as
 
 $$
-\hat{U}(t, t_0) = \text{exp}\left[\frac{-i}{\hbar}\int_{t_0}^{t_0 + t}\hat{H}(\tau)d\tau\right],
+\hat{U}(t, t_0) = \text{exp}\left[\frac{-i}{\hbar}\int_{t_0}^{t_0 + t}\hat{H}(\tau)d\tau\right].
 $$
 
-and in practice implemented as
-
-$$
-\hat{U}(t, t_0) = \prod_{j=1}^N\text{exp}\left[-\frac{i}{\hbar} \delta t \hat{H}(t_j)  \right]+ \mathcal{O}(\delta t^2),
-$$
-
-where
-
-$$
-t_j = t_0 + T\frac{j-1}{N_t-1} = t_0 + \delta t (j-1)
-$$
-
-The time evolution operator defines the propagation of quantum mechanical states in time. The relevant time-averaged physical properties contained in this operator can be analysed by considering the *effective Floquet Hamiltonian*,
+The time evolution operator describes the propagation of quantum mechanical states in time. The relevant time-averaged physical properties contained in this operator can be analysed by considering the *effective Floquet Hamiltonian*,
 
 $$
 \hat{H}_F[t_0] = i\frac{\hbar}{T}\text{log}\left[\hat{U}(t_0 + T, t_0)\right],
@@ -41,6 +29,18 @@ $$
 the logarithm of the one-period time evolution operator.
 
 This library computes the eigenvalues $\varepsilon_n(\textbf{k})$ of $\hat{H}_F$ in the Brillouin zone (BZ) points $\textbf{k}$ for user defined driving fields and for the different approximations (methods) used to compute the interaction Hamiltonian $\hat{H}(t)$.
+
+In practice, the one-period time evolution operator is implemented as
+
+$$
+\hat{U}(t, t_0) = \prod_{j=1}^N\text{exp}\left[-\frac{i}{\hbar} \delta t \hat{H}(t_j)  \right]+ \mathcal{O}(\delta t^2),
+$$
+
+where
+
+$$
+t_j = t_0 + T\frac{j-1}{N_t-1} = t_0 + \delta t (j-1).
+$$
 
 ## Providing a crystal
 
@@ -51,29 +51,21 @@ The method described in Ref. [[1]](#ref1) supposes a crystal represented by its 
 In Ref. [[1]](#ref1) we describe 4 methods to compute $\hat{H}(t)$ from first principles,
 
 1. Extended systems: length gauge, "no intraband" approximation. Non-extended systems: length gauge.
-
-   $$
-    \hat{H}(t) = \hat{H}_0 - q \sum_j E^j(t)\cdot \hat{X}^j.
-   $$
-
+$$
+\hat{H}(t) = \hat{H}_0 - q \sum_j E^j(t)\cdot \hat{X}^j.
+$$
 2. Extended systems: velocity gauge, "no curvature" approximation. Non-extended systems: velocity gauge (exponential form).
-
-   $$
-    \hat{H}(t) = \text{exp}\left[\frac{iq}{\hbar}\sum_j A^j(t)\cdot \hat{X}^j\right]\hat{H}_0\;\text{exp}\left[\frac{-iq}{\hbar}\sum_j A^j(t)\cdot \hat{X}^j\right].
-   $$
-
+$$
+\hat{H}(t) = \text{exp}\left[\frac{iq}{\hbar}\sum_j A^j(t)\cdot \hat{X}^j\right]\hat{H}_0\;\text{exp}\left[\frac{-iq}{\hbar}\sum_j A^j(t)\cdot \hat{X}^j\right].
+$$
 3. Extended systems: velocity gauge, 1st order approximation. Non-extended systems: ditto.
-
-   $$
-    \hat{H}(t) = \hat{H}_0 - \frac{q}{M}\sum_j A^j(t)\cdot \hat{p}^j.
-   $$
-
+$$
+\hat{H}(t) = \hat{H}_0 - \frac{q}{M}\sum_j A^j(t)\cdot \hat{p}^j.
+$$
 4. Extended systems: velocity gauge, 2nd order approximation. Non-extended systems: ditto.
-
-   $$
-    \hat{H}(t) = \hat{H}_0 - \frac{q}{M}\sum_j A^j(t)\cdot \hat{p}^j + \frac{-q^2}{2\hbar^2}\sum_{jl} A^j(t)A^l(t)[\hat{\mathcal{D}}^j, [\hat{\mathcal{D}}^l, \hat{H}_0]].
-   $$
-
+$$
+\hat{H}(t) = \hat{H}_0 - \frac{q}{M}\sum_j A^j(t)\cdot \hat{p}^j + \frac{-q^2}{2\hbar^2}\sum_{jl} A^j(t)A^l(t)[\hat{\mathcal{D}}^j, [\hat{\mathcal{D}}^l, \hat{H}_0]].
+$$
 Where $M$ is the particle mass, $\hat{\mathcal{D}}^j$ is the covariant derivative described in Ref. [[1]](#ref1), $A^j(t)$ is the vector potential,
 
 $$
@@ -93,7 +85,7 @@ In non-extended systems, methods 1 and 2 are correct and 3 and 4 incorrect. In e
 Once provided a crystal, all dynamics are solely determined by $E^j(t)$. In Ref. [[1]](#ref1) we consider the most general expression for a $T$-periodic $E^j(t)$ compatible with the Floquet conditions,
 
 $$
-E^j(t) = \sum_{n=1}^{N} \hat{E}_n^j\cos\left(n\omega t - \varphi_n^j\right)\;\textbf{e}_j,
+E^j(t) = \sum_{n=1}^{N} \hat{E}_n^j\cos\left(n\omega t - \varphi_n^j\right)\textbf{e}_j,
 $$
 
 Here $N$ is the number of harmonics, $\hat{E}_n^j$ and $\varphi_n^j$ are the amplitude and phase corresponding to harmonic $n$ and component $j$, respectively and $\omega = 2\pi/T$.
@@ -131,15 +123,13 @@ where
 - `real(dp), intent(in) :: axstart(Nharm)` is an array of real numbers, each element `axstart(l)` containing the starting point of the amplitude $E^x_l$ corresponding to harmonic $l$ to consider in the calculation.
 - `real(dp), intent(in) :: axend(Nharm)` is an array of real numbers, each element `axend(l)` containing the ending point of the amplitude $E^x_l$ corresponding to harmonic $l$ to consider in the calculation.
 - `integer, intent(in) :: axsteps(Nharm)` is an array of positive integers, each element `axsteps(l)` containing the number of steps in the discretization of the amplitude $E^x_l$ corresponding to harmonic $l$ to consider in the calculation. The variable is discretized according to
-
-   $$
-    E^x_l(m) = E^x_l(1) + [E^x_l(M) - E^x_l(1)]\frac{m - 1}{M - 1},
-   $$
-
-  where $E^x_l(1)$ = `axstart(l)`, $E^x_l(M)$ = `axend(l)`, $M$ = `axsteps(l)`. If `axsteps(l)` = 1, then `axend(l)` = `axstart(l)`.
+$$
+E^x_l(m) = E^x_l(1) + [E^x_l(M) - E^x_l(1)]\frac{m - 1}{M - 1},
+$$
+where $E^x_l(1)$ = `axstart(l)`, $E^x_l(M)$ = `axend(l)`, $M$ = `axsteps(l)`. If `axsteps(l)` = 1, then `axend(l)` = `axstart(l)`.
 
 - `pxstart, pxend, pxsteps`: same data type and meaning as `axstart, axend, axsteps` except that they describe the phases $\varphi_l^x$.
-- `aystart, ayend, aysteps`, `pystart, pyend, pysteps`, `azstart, azend, azsteps`, `pzstart, pzend, pzsteps`: as `axstart, axend, axsteps` and `pxstart, pxend, pxsteps`, respectively except that they describe the variables $E^y_l$, $\varphi_l^y$, $E^z_l$, $\varphi_l^z$, respectively.
+- `aystart, ayend, aysteps`, `pystart, pyend, pysteps`, `azstart, azend, azsteps`, `pzstart, pzend, pzsteps`: same meaning as `axstart, axend, axsteps` and `pxstart, pxend, pxsteps`, respectively, except that they describe the variables $E^y_l$, $\varphi_l^y$, $E^z_l$, $\varphi_l^z$, respectively.
 - `real(dp), intent(in) :: omegastart` is a real number corresponding to the starting point of the frequency $\omega$ to consider in the calculation.
 - `real(dp), intent(in) :: omegaend` is a real number corresponding to the ending point of the frequency $\omega$ to consider in the calculation.
 - `integer, intent(in) :: omegasteps` is a positive integer, containing the number of steps in the discretization of the frequency $\omega$ to consider in the calculation. The variable is discretized as all other amplitudes and phases.
@@ -157,7 +147,7 @@ where
 
 ### Integer and continuous indices
 
-In the language of [SsTC](https://github.com/irukoa/SsTC_driver), a task has a number of integer and continuous indices. Functionally, the quasienergies $\varepsilon_n(\textbf{k})$ depend on a number of external parameters:
+In the language of [SsTC](https://github.com/irukoa/SsTC_driver), a task has a number of integer and continuous indices. Functionally, the quasienergies $\varepsilon_n(\textbf{k})$ depend on a number of external parameters aside of the BZ vector $\textbf{k}$:
 
 - Number of eigenvalues of the crystal $M$. These are passed as integer indices.
 - Driving parameters $E^{\{x, y, z\}}_l$, $\varphi_l^{\{x, y, z\}}$ for each harmonic $l\in[1, N]$. Passed as continuous indices.
@@ -176,7 +166,7 @@ Is called as,
 ```fortran
 Nt = tsk%ntsteps()
 ```
-where `integer :: Nt` is the number of steps $N_t$ in the discretization of $[t_0, t_0 + T]$ in the calculation of the time evolution operator.
+where `integer :: Nt` is the number of steps $N_t$ in the discretization of $[t_0, t_0 + T]$ in the calculation of the one period time evolution operator.
 
 ### Calculation method handle
 
@@ -209,8 +199,8 @@ to the `fpm.toml` file.
 The library includes three examples. These programs replicate the data used to create the plots in Ref. [[1]](#ref1).
 
 1. `Particle_in_a_Box`. This example simulates the particle in a box and calculates the quasienergy spectrum for variable driving field.
-2. `BC2N_Driving_Scan`. This example simulates the material BC$_2$N and calculates the quasienergy spectrum for variable $E^x$ of a monochromatic, X-linear driving field with frequency $\hbar\omega = 0.5\;\text{eV}$ in the BZ point $\textbf{k} = (1/2, 1/4, 0)$.
-3. `BC2N_Kpath`. This example simulates the material BC$_2$N and calculates the quasienergy spectrum for $E^x = 5.2\times10^8\;\text{V/m}$ of a monochromatic, X-linear driving field with frequency $\hbar\omega = 0.5\;\text{eV}$ in the BZ path $\Gamma$ - $X$ - $S$ - $Y$ - $\Gamma$.
+2. `BC2N_Driving_Scan`. This example simulates the material BC$_2$N and calculates the quasienergy spectrum for variable $E^x$ of a monochromatic, X-linear driving field with frequency $\hbar\omega = 0.5$ $\text{eV}$ in the BZ point $\textbf{k} = (1/2, 1/4, 0)$.
+3. `BC2N_Kpath`. This example simulates the material BC$_2$N and calculates the quasienergy spectrum for $E^x = 5.2\times10^8$ $\text{V/m}$ of a monochromatic, X-linear driving field with frequency $\hbar\omega = 0.5$ $\text{eV}$ in the BZ path $\Gamma$ - $\text{X}$ - $\text{S}$ - $\text{Y}$ - $\Gamma$.
 
 These can be run by
 
@@ -227,11 +217,9 @@ fpm run --example BC2N_Kpath
 respectively.
 
 # TODO
-- Revision.
-- Banners.
 - Upload to zenodo.
-- CITATION/LICENSE.
-- Reference main publication.
+- Update CITATION
+- Reference main publication when published.
 - Fix readme on github.
 
 <a id="ref1"></a>
