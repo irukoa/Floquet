@@ -71,7 +71,7 @@ $$
 4. Extended systems: velocity gauge, 2nd order approximation. Non-extended systems: ditto.
 
 $$
-\hat{H}(t) = \hat{H}_0 - \frac{q}{M}\sum_j A^j(t)\cdot \hat{p}^j + \frac{-q^2}{2\hbar^2}\sum_{jl} A^j(t)A^l(t)[\hat{\mathcal{D}}^j, [\hat{\mathcal{D}}^l, \hat{H}_0]].
+\hat{H}(t) = \hat{H}_0 - \frac{q}{M}\sum_j A^j(t)\cdot \hat{p}^j + \frac{-q^2}{2\hbar^2} \sum_j \sum_l A^j(t)A^l(t)[\hat{\mathcal{D}}^j, [\hat{\mathcal{D}}^l, \hat{H}_0]].
 $$
 
 Where $M$ is the particle mass, $\hat{\mathcal{D}}^j$ is the covariant derivative described in Ref. [[1]](#ref1), $A^j(t)$ is the vector potential,
@@ -227,11 +227,11 @@ fpm run --example BC2N_Kpath
 respectively.
 
 # TODO
+- Reference main publication when published.
 - Upload to zenodo.
 - Update CITATION
-- Reference main publication when published.
-- When done, tag as v1.0.0 in fpm.toml, main.F90, CITATION.
-- Then release.
+- When done, tag as v1.0.0 in fpm.toml, main.F90 and CITATION.
+- Release.
 
 <a id="ref1"></a>
 [1] A. R. Puente-Uriona *et al*. In preparation.
