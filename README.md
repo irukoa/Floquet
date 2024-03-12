@@ -51,21 +51,29 @@ The method described in Ref. [[1]](#ref1) supposes a crystal represented by its 
 In Ref. [[1]](#ref1) we describe 4 methods to compute $\hat{H}(t)$ from first principles,
 
 1. Extended systems: length gauge, "no intraband" approximation. Non-extended systems: length gauge.
+
 $$
 \hat{H}(t) = \hat{H}_0 - q \sum_j E^j(t)\cdot \hat{X}^j.
 $$
+
 2. Extended systems: velocity gauge, "no curvature" approximation. Non-extended systems: velocity gauge (exponential form).
+
 $$
 \hat{H}(t) = \text{exp}\left[\frac{iq}{\hbar}\sum_j A^j(t)\cdot \hat{X}^j\right]\hat{H}_0\;\text{exp}\left[\frac{-iq}{\hbar}\sum_j A^j(t)\cdot \hat{X}^j\right].
 $$
+
 3. Extended systems: velocity gauge, 1st order approximation. Non-extended systems: ditto.
+
 $$
 \hat{H}(t) = \hat{H}_0 - \frac{q}{M}\sum_j A^j(t)\cdot \hat{p}^j.
 $$
+
 4. Extended systems: velocity gauge, 2nd order approximation. Non-extended systems: ditto.
+
 $$
 \hat{H}(t) = \hat{H}_0 - \frac{q}{M}\sum_j A^j(t)\cdot \hat{p}^j + \frac{-q^2}{2\hbar^2}\sum_{jl} A^j(t)A^l(t)[\hat{\mathcal{D}}^j, [\hat{\mathcal{D}}^l, \hat{H}_0]].
 $$
+
 Where $M$ is the particle mass, $\hat{\mathcal{D}}^j$ is the covariant derivative described in Ref. [[1]](#ref1), $A^j(t)$ is the vector potential,
 
 $$
@@ -123,9 +131,11 @@ where
 - `real(dp), intent(in) :: axstart(Nharm)` is an array of real numbers, each element `axstart(l)` containing the starting point of the amplitude $E^x_l$ corresponding to harmonic $l$ to consider in the calculation.
 - `real(dp), intent(in) :: axend(Nharm)` is an array of real numbers, each element `axend(l)` containing the ending point of the amplitude $E^x_l$ corresponding to harmonic $l$ to consider in the calculation.
 - `integer, intent(in) :: axsteps(Nharm)` is an array of positive integers, each element `axsteps(l)` containing the number of steps in the discretization of the amplitude $E^x_l$ corresponding to harmonic $l$ to consider in the calculation. The variable is discretized according to
+
 $$
 E^x_l(m) = E^x_l(1) + [E^x_l(M) - E^x_l(1)]\frac{m - 1}{M - 1},
 $$
+
 where $E^x_l(1)$ = `axstart(l)`, $E^x_l(M)$ = `axend(l)`, $M$ = `axsteps(l)`. If `axsteps(l)` = 1, then `axend(l)` = `axstart(l)`.
 
 - `pxstart, pxend, pxsteps`: same data type and meaning as `axstart, axend, axsteps` except that they describe the phases $\varphi_l^x$.
@@ -220,7 +230,8 @@ respectively.
 - Upload to zenodo.
 - Update CITATION
 - Reference main publication when published.
-- Fix readme on github.
+- When done, tag as v1.0.0 in fpm.toml, main.F90, CITATION.
+- Then release.
 
 <a id="ref1"></a>
 [1] A. R. Puente-Uriona *et al*. In preparation.
