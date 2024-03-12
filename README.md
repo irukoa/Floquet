@@ -1,3 +1,6 @@
+[![Language](https://img.shields.io/badge/-Fortran-734f96?logo=fortran&logoColor=white)](https://github.com/topics/fortran)
+ZENODO
+[![Testing suite](https://github.com/irukoa/Floquet/actions/workflows/CI.yml/badge.svg)](https://github.com/irukoa/Floquet/actions/workflows/CI.yml)
 # Floquet
 This is a modern Fortran library companion to Ref. [[1]](#ref1), which implements the computational scheme described in that reference to calculate the quasienergy spectrum of real materials and tight-binding models subjected to time-periodic driving fields.
 

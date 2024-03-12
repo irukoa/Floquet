@@ -15,11 +15,11 @@ identifiers:
 repository-code: 'https://github.com/irukoa/Floquet'
 url: 'https://github.com/irukoa/Floquet'
 abstract: >-
-  Floquet. A Fortran library implementing 
+  Floquet: a Fortran library implementing
   Floquet methods for quantum mechanical systems.
-  This code is a companion to Ref. [####], 
+  This code is a companion to Ref. [####],
   a scientific paper on the methodological
-  implementation of the calculation of 
+  implementation of the calculation of
   quasienergies in quantum mechanical
   extended systems.
 keywords:
