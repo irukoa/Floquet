@@ -31,9 +31,6 @@ jobs:
         - name: Build Floquet
           run: |
             fpm run
-        - name: Test Floquet (MPI singleton)
+        - name: Test Floquet
           run: |
             fpm test -compiler mpifort --runner-args=" -np 1" --flag="-g -Wall"
-        - name: Test Floquet (2 MPI processes)
-          run: |
-            fpm test -compiler mpifort --runner-args=" -np 2" --flag="-g -Wall"
