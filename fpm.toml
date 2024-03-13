@@ -23,7 +23,9 @@ implicit-external = true
 source-form = "free"
 
 [dependencies]
-SsTC_driver = { git="https://github.com/irukoa/SsTC_driver.git" }
+MAC = { git="https://github.com/irukoa/MAC.git", tag = "v1.0.0" }
+WannInt = { git="https://github.com/irukoa/WannInt.git", tag = "v1.0.0" }
+SsTC_driver = { git="https://github.com/irukoa/SsTC_driver.git", tag = "v1.0.0" }
 mpi = "*"
 openmp = "*"
 
