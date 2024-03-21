@@ -2,17 +2,17 @@
 ZENODO
 [![Testing suite](https://github.com/irukoa/Floquet/actions/workflows/CI.yml/badge.svg)](https://github.com/irukoa/Floquet/actions/workflows/CI.yml)
 # Floquet
-This is a modern Fortran library companion to Ref. [[1]](#ref1), which implements the computational scheme described in that reference to calculate the quasienergy spectrum of real materials and tight-binding models subjected to time-periodic driving fields.
+This is a modern Fortran library, companion to Ref. [[1]](#ref1), which implements the computational scheme described in that reference to calculate the quasienergy spectrum of real materials and tight-binding models subjected to time-periodic driving fields.
 
-# Working principle
+## Working principle
 
 Suppose that a crystal (real material or tight-binding model), is subjected to a time periodic driving field $E^j(t)$ with period $T$. Provided that the crystal is described by a Hamiltonian $\hat{H}_0$ and by a Berry connection $\hat{\xi}^j$, the interacting dynamics in the dipole approximation are described by the Hamiltonian
 
 $$
-\hat{H}(t) = \hat{H}_0 - q \sum_j E^j(t)\cdot r^j,
+\hat{H}(t) = \hat{H}_0 - q \sum_j E^j(t)\cdot \hat{r}^j,
 $$
 
-where $q$ is the particle charge and $r^j$ is the position operator of the system. The intricacies related to this operator in extended systems are discussed in Ref. [[1]](#ref1).
+where $q$ is the particle charge and $\hat{r}^j$ is the position operator of the crystal.
 
 The time evolution operator is defined as
 
@@ -33,7 +33,7 @@ This library computes the eigenvalues $\varepsilon_n(\textbf{k})$ of $\hat{H}_F$
 In practice, the calculation of the one-period time evolution operator is implemented as
 
 $$
-\hat{U}(t, t_0) = \prod_{j=1}^N\text{exp}\left[-\frac{i}{\hbar} \delta t \hat{H}(t_j)  \right]+ \mathcal{O}(\delta t^2),
+\hat{U}(t, t_0) = \prod_{j=1}^{N_t}\text{exp}\left[-\frac{i}{\hbar} \delta t \hat{H}(t_j)  \right]+ \mathcal{O}(\delta t^2),
 $$
 
 where
@@ -41,10 +41,6 @@ where
 $$
 t_j = t_0 + T\frac{j-1}{N_t-1} = t_0 + \delta t (j-1).
 $$
-
-## Providing a crystal
-
-The method described in Ref. [[1]](#ref1) supposes a crystal represented by its "exact tight-binding parameters". In practice, these are created by using [WannInt](https://github.com/irukoa/WannInt) crystals. Notice that this way to represent a physical system is quite flexible and can be used to represent real materials, models, and non-extended systems.
 
 ## Methods to compute $\hat{H}(t)$
 
@@ -74,7 +70,7 @@ $$
 \hat{H}(t) = \hat{H}_0 - \frac{q}{M}\sum_j A^j(t)\cdot \hat{p}^j + \frac{-q^2}{2\hbar^2} \sum_j \sum_l A^j(t)A^l(t)[\hat{\mathcal{D}}^j, [\hat{\mathcal{D}}^l, \hat{H}_0]].
 $$
 
-Where $M$ is the particle mass, $\hat{\mathcal{D}}^j$ is the covariant derivative described in Ref. [[1]](#ref1), $A^j(t)$ is the vector potential,
+Where $M$ is the particle mass, $\hat{p}^j$ is the momentum operator, $\hat{\mathcal{D}}^j$ is the covariant derivative described in Ref. [[1]](#ref1), $A^j(t)$ is the vector potential,
 
 $$
 A^j(t) = -\int_{t'}^{t}E^j(\tau)d\tau,
@@ -86,7 +82,11 @@ $$
 X_{nm}^j(\textbf{k}) = (1 - \delta_{nm})\xi_{nm}^j(\textbf{k}).
 $$
 
-In non-extended systems, methods 1 and 2 are correct and 3 and 4 are increasingly better approximations to the real expression of $\hat{H}(t)$ given by methods 1 and 2. In extended systems, methods 3 and 4 are increasingly better approximations to the real expression of $\hat{H}(t)$ and methods 1 and 2 are incorrect.
+In non-extended systems, methods 1 and 2 are correct and 3 and 4 are increasingly better approximations to the real expression of $\hat{H}(t)$ given by methods 1 and 2. In extended systems, methods 3 and 4 are increasingly better approximations to the real expression of $\hat{H}(t)$ and methods 1 and 2 are unfit for calculations.
+
+## Specifying a crystal
+
+The method described in Ref. [[1]](#ref1) supposes a crystal represented by its "exact tight-binding parameters", $\hat{H}_0$ and $\hat{\xi}^j$. In practice, crystals are specified employing [WannInt](https://github.com/irukoa/WannInt)'s `crystal` object. Notice that this way to represent a physical system can be used to represent real materials, models, and non-extended systems.
 
 ## Specifying $E^j(t)$
 
@@ -96,7 +96,7 @@ $$
 E^j(t) = \sum_{n=1}^{N} \hat{E}_n^j\cos\left(n\omega t - \varphi_n^j\right)\textbf{e}_j,
 $$
 
-Here $N$ is the number of harmonics, $\hat{E}_n^j$ and $\varphi_n^j$ are the amplitude and phase corresponding to harmonic $n$ and component $j$, respectively and $\omega = 2\pi/T$.
+where $N$ is the number of harmonics, $\hat{E}_n^j$ and $\varphi_n^j$ are the amplitude and phase corresponding to harmonic $n$ and component $j$, respectively and $\omega = 2\pi/T$.
 
 # API
 
@@ -146,7 +146,7 @@ where $E^x_l(1)$ = `axstart(l)`, $E^x_l(M)$ = `axend(l)`, $M$ = `axsteps(l)`. If
 - `real(dp), intent(in) :: t0start` is a real number corresponding to the starting point of the initial time $t_0$ to consider in the calculation.
 - `real(dp), intent(in) :: t0end` is a real number corresponding to the ending point of the initial time $t_0$ to consider in the calculation.
 - `integer, intent(in) :: t0steps` is a positive integer, containing the number of steps in the discretization of the initial time $t_0$ to consider in the calculation. The variable is discretized as all other amplitudes and phases.
-- `integer, intent(in), optional :: Nt` is a integer containing the number of points to discretize the time interval $[t_0, t_0 + T]$ in the calculation of the one period time evolution operator. Default is 513 steps.
+- `integer, intent(in), optional :: Nt` is a integer containing the number of points in the discretization of $[t_0, t_0 + T]$ for the calculation of the one period time evolution operator. Default is 513 steps.
 - `integer, intent(in), optional :: htk_calc_method` is an integer specifying the method to use in the calculation of $\hat{H}(t)$. The possibilities are
   - `-1`: length gauge, "no intraband" approximation.
   - `0`: velocity gauge, "no curvature" approximation.
@@ -159,8 +159,8 @@ where $E^x_l(1)$ = `axstart(l)`, $E^x_l(M)$ = `axend(l)`, $M$ = `axsteps(l)`. If
 
 In the language of [SsTC](https://github.com/irukoa/SsTC_driver), a task has a number of integer and continuous indices. Functionally, the quasienergies $\varepsilon_n(\textbf{k})$ depend on a number of external parameters aside of the BZ vector $\textbf{k}$:
 
-- Number of eigenvalues of the crystal $M$. These are passed as integer indices.
-- Driving parameters $E^{\{x, y, z\}}_l$, $\varphi_l^{\{x, y, z\}}$ for each harmonic $l\in[1, N]$. Passed as continuous indices.
+- Number of eigenvalues of the crystal $M$. This is passed as an integer index taking $M$ values.
+- Driving parameters $E^{\{x, y, z\}}_l$ (3 variables), $\varphi_l^{\{x, y, z\}}$  (3 variables) for each harmonic $l\in[1, N]$. Passed as $6\times N$ continuous indices.
 - Frequency $\omega$. Passed as a continuous index.
 - Starting time $t_0$. Passed as a continuous index.
 
@@ -208,13 +208,13 @@ The repository can be downloaded by running
 ```
 git clone https://github.com/irukoa/Floquet.git
 ```
-in a directory of the users choice.
+in a directory of the users' choice.
 
 # Usage
 
 The repository includes three examples. These programs replicate the data used to create the plots in Ref. [[1]](#ref1).
 
-1. `Particle_in_a_Box`. This example simulates the particle in a box and calculates the quasienergy spectrum for variable driving field.
+1. `Particle_in_a_Box`. This example simulates the particle in a box and calculates the quasienergy spectrum for variable monochromatic driving field.
 2. `BC2N_Driving_Scan`. This example simulates the material BC$_2$N and calculates the quasienergy spectrum for variable $E^x$ of a monochromatic, X-linear driving field with frequency $\hbar\omega = 0.5$ $\text{eV}$ in the BZ point $\textbf{k} = (1/2, 1/4, 0)$.
 3. `BC2N_Kpath`. This example simulates the material BC$_2$N and calculates the quasienergy spectrum for $E^x = 5.2\times10^8$ $\text{V/m}$ of a monochromatic, X-linear driving field with frequency $\hbar\omega = 0.5$ $\text{eV}$ in the BZ path $\Gamma$ - $\text{X}$ - $\text{S}$ - $\text{Y}$ - $\Gamma$.
 
