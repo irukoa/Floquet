@@ -164,7 +164,10 @@ In the language of [SsTC](https://github.com/irukoa/SsTC_driver), a task has a n
 - Frequency $\omega$. Passed as a continuous index.
 - Starting time $t_0$. Passed as a continuous index.
 
-Each of the $6\times N + 2$ continuous indices can be discretized in a number of steps by providing a suitable `*steps(Nharm)` entry.
+Each of the $6\times N + 2$ continuous indices can be discretized in a number of steps by providing a suitable `*steps(Nharm)` entry. The continuous index labeling is the following:
+
+- Labels $[6(l-1)+1, 6(l-1)+6]$ correspond to the variables $E^{x}_l$, $\varphi_l^{x}$, ..., $E^{z}_l$, $\varphi_l^{z}$ of the $l$th harmonic.
+- Labels $6\times N + 1$ and $6\times N + 2$ correspond to $t_0$ and $\omega$, respectively.
 
 ### Sampling
 

@@ -1,6 +1,7 @@
 module Quasienergies
 
-  use SsTC_driver, only: task_specifier, crystal, diagonalize, expsh, logu
+  use SsTC_driver, only: container, task_specifier, crystal, &
+    diagonalize, expsh, logu
   use Floquet_kinds, only: dp
   use Floquet_defs, only: cmplx_0, cmplx_i, pi
   use Floquet_Wannier_interpolation, only: wannier_momentum, &
@@ -190,6 +191,8 @@ contains
                    PW(crys%num_bands(), crys%num_bands(), 3), &
                    P2W(crys%num_bands(), crys%num_bands(), 3, 3)
 
+    type(container) :: DHW, DDHW, DAW
+
     quasienergy = cmplx_0
 
     HW = crys%hamiltonian(kpt=k)
@@ -213,18 +216,22 @@ contains
                         cmplx_i*NAD(:, :, i)
         enddo
       case (1)  !Velocity gauge: 2 terms in expansion.
+        DHW = crys%hamiltonian(kpt=k, derivative=1)
         PW = wannier_momentum(HW=HW, &
-                              DHW=crys%hamiltonian(kpt=k, derivative=1), &
+                              DHW=DHW, &
                               AW=AW)
       case (2)  !Velocity gauge: 3 terms in expansion.
+        DHW = crys%hamiltonian(kpt=k, derivative=1)
         PW = wannier_momentum(HW=HW, &
-                              DHW=crys%hamiltonian(kpt=k, derivative=1), &
+                              DHW=DHW, &
                               AW=AW)
+        DDHW = crys%hamiltonian(kpt=k, derivative=2)
+        DAW = crys%berry_connection(kpt=k, derivative=1)
         P2W = wannier_2nd_momentum(HW=HW, &
-                                   DHW=crys%hamiltonian(kpt=k, derivative=1), &
-                                   DDHW=crys%hamiltonian(kpt=k, derivative=2), &
+                                   DHW=DHW, &
+                                   DDHW=DDHW, &
                                    AW=AW, &
-                                   DAW=crys%berry_connection(kpt=k, derivative=1), &
+                                   DAW=DAW, &
                                    PW=PW)
       end select
 
