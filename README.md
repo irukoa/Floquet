@@ -70,6 +70,16 @@ $$
 \hat{H}(t) = \hat{H}_0 - \frac{q}{M}\sum_j A^j(t)\cdot \hat{p}^j + \frac{-q^2}{2\hbar^2} \sum_j \sum_l A^j(t)A^l(t)[\hat{\mathcal{D}}^j, [\hat{\mathcal{D}}^l, \hat{H}_0]].
 $$
 
+5. Extended systems: velocity gauge, 3rd order approximation. Non-extended systems: ditto.
+
+$$
+\hat{H}(t) = \hat{H}_0 - \frac{q}{M}\sum_j A^j(t)\cdot \hat{p}^j + \frac{-q^2}{2\hbar^2} \sum_j \sum_l A^j(t)A^l(t)[\hat{\mathcal{D}}^j, [\hat{\mathcal{D}}^l, \hat{H}_0]] +
+$$
+
+$$
+\frac{-q^3}{6\hbar^3} \sum_p \sum_j \sum_l A^p(t)A^j(t)A^l(t)[\hat{\mathcal{D}}^p, [\hat{\mathcal{D}}^j, [\hat{\mathcal{D}}^l, \hat{H}_0]]]
+$$
+
 Where $M$ is the particle mass, $\hat{p}^j$ is the momentum operator, $\hat{\mathcal{D}}^j$ is the covariant derivative described in Ref. [[1]](#ref1), $A^j(t)$ is the vector potential,
 
 $$
@@ -82,7 +92,7 @@ $$
 X_{nm}^j(\textbf{k}) = (1 - \delta_{nm})\xi_{nm}^j(\textbf{k}).
 $$
 
-In non-extended systems, methods 1 and 2 are correct and 3 and 4 are increasingly better approximations to the real expression of $\hat{H}(t)$ given by methods 1 and 2. In extended systems, methods 3 and 4 are increasingly better approximations to the real expression of $\hat{H}(t)$ and methods 1 and 2 are unfit for calculations.
+In non-extended systems, methods 1 and 2 are correct and 3, 4 and 5 are increasingly better approximations to the real expression of $\hat{H}(t)$ given by methods 1 and 2. In extended systems, methods 3, 4 and 5 are increasingly better approximations to the real expression of $\hat{H}(t)$ and methods 1 and 2 are unfit for calculations.
 
 ## Specifying a crystal
 
@@ -152,6 +162,7 @@ where $E^x_l(1)$ = `axstart(l)`, $E^x_l(M)$ = `axend(l)`, $M$ = `axsteps(l)`. If
   - `0`: velocity gauge, "no curvature" approximation.
   - `1`: velocity gauge, 1st order approximation.
   - `2`: velocity gauge, 2nd order approximation.
+  - `3`: velocity gauge, 3rd order approximation.
 
   Default is `1`.
 

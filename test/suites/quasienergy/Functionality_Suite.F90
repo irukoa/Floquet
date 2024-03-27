@@ -24,7 +24,7 @@ contains
     type(crystal) :: BC2N
     type(quasienergies_calc_tsk) :: tsk
 
-    real(dp) :: test(8), reference(-1:2, 8)
+    real(dp) :: test(8), reference(-1:3, 8)
     real(dp) :: klist(3, 1)
     complex(dp), allocatable :: store_at(:, :, :)
     integer :: ic_way
@@ -49,13 +49,18 @@ contains
                        -8.895083591555945E-002_dp, 4.270507188051712E-002_dp, &
                        5.524258070670914E-002_dp, 0.233900225862371_dp]
 
+    reference(3, :) = [-0.16138564054336371_dp, -0.14262274413577328_dp, &
+                       -9.5433263875139160E-002_dp, -9.0818138744458168E-002_dp, &
+                       -9.0231177095024151E-002_dp, 3.9328208981623931E-002_dp, &
+                       5.7088077179957196E-002_dp, 0.23095858939704494_dp]
+
     klist(:, 1) = [0.5_dp, 0.25_dp, 0.0_dp]
 
     call BC2N%construct(name="BC2N", &
                         from_file="./material_data/BC2N_tb.dat", &
                         fermi_energy=7.8461_dp)
 
-    do ic_way = -1, 2
+    do ic_way = -1, 3
 
       call tsk%build_floquet_task(crys=BC2N, &
                                   Nharm=1, &

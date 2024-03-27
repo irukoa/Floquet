@@ -79,7 +79,7 @@ contains
     if (rank == 0) write (error_unit, "(A, i0, A)") "  Number of harmonics = ", NH, "."
     if (rank == 0) write (error_unit, "(A, i0, A)") "  Number of t-points = ", NT, "."
 
-    do ic_way = -1, 2
+    do ic_way = -1, 3
 
       call tsk%build_floquet_task(crys=BC2N, &
                                   Nharm=NH, &

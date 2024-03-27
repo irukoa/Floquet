@@ -6,6 +6,7 @@ module Quasienergies
   use Floquet_defs, only: cmplx_0, cmplx_i, pi
   use Floquet_Wannier_interpolation, only: wannier_momentum, &
     wannier_2nd_momentum, &
+    wannier_3rd_momentum, &
     NADHW => NAD
 
   implicit none
@@ -129,10 +130,10 @@ contains
 
     if (present(htk_calc_method)) then
       select case (htk_calc_method)
-      case (-1:2)
+      case (-1:3)
         self%c_way = htk_calc_method
       case default
-        error stop "Floquet: Error #1: htk_calc_method must be an integer in the [-1, 2] range."
+        error stop "Floquet: Error #1: htk_calc_method must be an integer in the [-1, 3] range."
       end select
     endif
 
@@ -188,10 +189,11 @@ contains
                    AH(crys%num_bands(), crys%num_bands(), 3), &
                    HW(crys%num_bands(), crys%num_bands()), &
                    HH(crys%num_bands(), crys%num_bands()), &
-                   PW(crys%num_bands(), crys%num_bands(), 3), &
-                   P2W(crys%num_bands(), crys%num_bands(), 3, 3)
+                   P1W(crys%num_bands(), crys%num_bands(), 3), &
+                   P2W(crys%num_bands(), crys%num_bands(), 3, 3), &
+                   P3W(crys%num_bands(), crys%num_bands(), 3, 3, 3)
 
-    type(container) :: DHW, DDHW, DAW
+    type(container) :: DHW, DDHW, DDDHW, DAW, DDAW
 
     quasienergy = cmplx_0
 
@@ -217,14 +219,14 @@ contains
         enddo
       case (1)  !Velocity gauge: 2 terms in expansion.
         DHW = crys%hamiltonian(kpt=k, derivative=1)
-        PW = wannier_momentum(HW=HW, &
-                              DHW=DHW, &
-                              AW=AW)
+        P1W = wannier_momentum(HW=HW, &
+                               DHW=DHW, &
+                               AW=AW)
       case (2)  !Velocity gauge: 3 terms in expansion.
         DHW = crys%hamiltonian(kpt=k, derivative=1)
-        PW = wannier_momentum(HW=HW, &
-                              DHW=DHW, &
-                              AW=AW)
+        P1W = wannier_momentum(HW=HW, &
+                               DHW=DHW, &
+                               AW=AW)
         DDHW = crys%hamiltonian(kpt=k, derivative=2)
         DAW = crys%berry_connection(kpt=k, derivative=1)
         P2W = wannier_2nd_momentum(HW=HW, &
@@ -232,7 +234,31 @@ contains
                                    DDHW=DDHW, &
                                    AW=AW, &
                                    DAW=DAW, &
-                                   PW=PW)
+                                   P1W=P1W)
+      case (3)  !Velocity gauge: 4 terms in expansion.
+        DHW = crys%hamiltonian(kpt=k, derivative=1)
+        P1W = wannier_momentum(HW=HW, &
+                               DHW=DHW, &
+                               AW=AW)
+        DDHW = crys%hamiltonian(kpt=k, derivative=2)
+        DAW = crys%berry_connection(kpt=k, derivative=1)
+        P2W = wannier_2nd_momentum(HW=HW, &
+                                   DHW=DHW, &
+                                   DDHW=DDHW, &
+                                   AW=AW, &
+                                   DAW=DAW, &
+                                   P1W=P1W)
+        DDDHW = crys%hamiltonian(kpt=k, derivative=3)
+        DDAW = crys%berry_connection(kpt=k, derivative=2)
+        P3W = wannier_3rd_momentum(HW=HW, &
+                                   DHW=DHW, &
+                                   DDHW=DDHW, &
+                                   DDDHW=DDDHW, &
+                                   AW=AW, &
+                                   DAW=DAW, &
+                                   DDAW=DDAW, &
+                                   P1W=P1W, &
+                                   P2W=P2W)
       end select
 
       Nharm = (self%cdims%rank() - 2)/6
@@ -302,7 +328,7 @@ contains
 
             q = A_field(amplitudes, phases, omega, tper, t0) !In A^-1
 
-            H_TK = htk_v_2_terms(HW, PW, q) !In eV.
+            H_TK = htk_v_2_terms(HW, P1W, q) !In eV.
 
           case (2) !Velocity gauge: 3 terms in expansion.
             !The interaction term is V(t) = e*Q(t)*p/m + \sum_{ij} e^2*Q_j(t)*Q_i(t)*[D^j, [D^i, H]]/2\hbar^2
@@ -310,7 +336,16 @@ contains
 
             q = A_field(amplitudes, phases, omega, tper, t0) !In A^-1
 
-            H_TK = htk_v_3_terms(HW, PW, P2W, q) !In eV.
+            H_TK = htk_v_3_terms(HW, P1W, P2W, q) !In eV.
+
+          case (3) !Velocity gauge: 4 terms in expansion.
+            !The interaction term is V(t) = e*Q(t)*p/m + \sum_{ij} e^2*Q_j(t)*Q_i(t)*[D^j, [D^i, H]]/2\hbar^2 +
+            !\sum_{ijl} e^3*Q_l(t)*Q_j(t)*Q_i(t)*[D^l, [D^j, [D^i, H]]]/6\hbar^2
+            !Q(t) = -\int dt E(t).
+
+            q = A_field(amplitudes, phases, omega, tper, t0) !In A^-1
+
+            H_TK = htk_v_4_terms(HW, P1W, P2W, P3W, q) !In eV.
 
           end select
 
@@ -436,10 +471,10 @@ contains
 
   end function htk_v_no_curv_appr
 
-  pure function htk_v_2_terms(HW, PW, q) result(H_TK)
+  pure function htk_v_2_terms(HW, P1W, q) result(H_TK)
     real(dp), intent(in)    :: q(3)
     complex(dp), intent(in) :: HW(:, :), &
-                               PW(:, :, :)
+                               P1W(:, :, :)
     complex(dp)             :: H_TK(size(HW(:, 1)), size(HW(:, 1)))
 
     integer :: n, m
@@ -449,15 +484,15 @@ contains
     do n = 1, size(HW(:, 1))
       do m = 1, size(HW(:, 1))
         H_TK(n, m) = H_TK(n, m) + &
-                     sum(q*PW(n, m, :))
+                     sum(q*P1W(n, m, :))
       enddo
     enddo
   end function htk_v_2_terms
 
-  pure function htk_v_3_terms(HW, PW, P2W, q) result(H_TK)
+  pure function htk_v_3_terms(HW, P1W, P2W, q) result(H_TK)
     real(dp), intent(in)    :: q(3)
     complex(dp), intent(in) :: HW(:, :), &
-                               PW(:, :, :), &
+                               P1W(:, :, :), &
                                P2W(:, :, :, :)
     complex(dp)             :: H_TK(size(HW(:, 1)), size(HW(:, 1)))
 
@@ -468,7 +503,7 @@ contains
     do m = 1, size(HW(:, 1))
       do n = 1, size(HW(:, 1))
         H_TK(n, m) = H_TK(n, m) + &
-                     sum(q*PW(n, m, :))
+                     sum(q*P1W(n, m, :))
       enddo
     enddo
 
@@ -483,5 +518,49 @@ contains
       enddo
     enddo
   end function htk_v_3_terms
+
+  pure function htk_v_4_terms(HW, P1W, P2W, P3W, q) result(H_TK)
+    real(dp), intent(in)    :: q(3)
+    complex(dp), intent(in) :: HW(:, :), &
+                               P1W(:, :, :), &
+                               P2W(:, :, :, :), &
+                               P3W(:, :, :, :, :)
+    complex(dp)             :: H_TK(size(HW(:, 1)), size(HW(:, 1)))
+
+    integer :: n, m, i, j, l
+
+    H_TK = HW
+
+    do m = 1, size(HW(:, 1))
+      do n = 1, size(HW(:, 1))
+        H_TK(n, m) = H_TK(n, m) + &
+                     sum(q*P1W(n, m, :))
+      enddo
+    enddo
+
+    do j = 1, 3
+      do i = 1, 3
+        do m = 1, size(HW(:, 1))
+          do n = 1, size(HW(:, 1))
+            H_TK(n, m) = H_TK(n, m) + &
+                         q(i)*q(j)*P2W(n, m, i, j)/(2.0_dp)
+          enddo
+        enddo
+      enddo
+    enddo
+
+    do l = 1, 3
+      do j = 1, 3
+        do i = 1, 3
+          do m = 1, size(HW(:, 1))
+            do n = 1, size(HW(:, 1))
+              H_TK(n, m) = H_TK(n, m) + &
+                           q(i)*q(j)*q(l)*P3W(n, m, i, j, l)/(6.0_dp)
+            enddo
+          enddo
+        enddo
+      enddo
+    enddo
+  end function htk_v_4_terms
 
 end module Quasienergies
