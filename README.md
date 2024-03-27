@@ -44,7 +44,7 @@ $$
 
 ## Methods to compute $\hat{H}(t)$
 
-In Ref. [[1]](#ref1) we describe 4 methods to compute $\hat{H}(t)$ from first principles,
+In Ref. [[1]](#ref1) we describe 5 methods to compute $\hat{H}(t)$ from first principles,
 
 1. Extended systems: length gauge, "no intraband" approximation. Non-extended systems: length gauge.
 
@@ -198,7 +198,7 @@ Is called as,
 ```fortran
 c_way = tsk%htk_calc_method()
 ```
-where `integer :: c_way` is the method $[-1, 2]$ used to calculate $\hat{H}(t)$.
+where `integer :: c_way` is the method $[-1, 3]$ used to calculate $\hat{H}(t)$.
 
 ### Floquet initialization query
 
