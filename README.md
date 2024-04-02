@@ -210,13 +210,13 @@ where `logical :: initialized ` is `.true.` if the task has been initialized and
 
 # Build
 
-An automated build is available for [Fortran Package Manager](https://fpm.fortran-lang.org/) users. This is the recommended way to build and use Floquet in your projects. You can add Floquet to your project dependencies by adding
+An automated build is available for [Fortran Package Manager](https://fpm.fortran-lang.org/) users. This is the recommended way to build and use Floquet in your projects. You can add Floquet to your project dependencies by including
 
 ```
 [dependencies]
 Floquet = { git="https://github.com/irukoa/Floquet.git" }
 ```
-to the `fpm.toml` file.
+in the `fpm.toml` file.
 
 The repository can be downloaded by running
 ```
