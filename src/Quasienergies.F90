@@ -4,9 +4,14 @@ module Quasienergies
     diagonalize, expsh, logu
   use Floquet_kinds, only: dp
   use Floquet_defs, only: cmplx_0, cmplx_i, pi
+  use Floquet_Time_Dependent_defs, only: E_field, A_field, &
+    htk_l_no_intra_appr, htk_v_no_curv_appr, &
+    htk_v_2_terms, htk_v_3_terms, &
+    htk_v_4_terms, htk_v_5_terms
   use Floquet_Wannier_interpolation, only: wannier_momentum, &
     wannier_2nd_momentum, &
     wannier_3rd_momentum, &
+    wannier_4th_momentum, &
     NADHW => NAD
 
   implicit none
@@ -130,10 +135,10 @@ contains
 
     if (present(htk_calc_method)) then
       select case (htk_calc_method)
-      case (-1:3)
+      case (-1:4)
         self%c_way = htk_calc_method
       case default
-        error stop "Floquet: Error #1: htk_calc_method must be an integer in the [-1, 3] range."
+        error stop "Floquet: Error #1: htk_calc_method must be an integer in the [-1, 4] range."
       end select
     endif
 
@@ -191,9 +196,11 @@ contains
                    HH(crys%num_bands(), crys%num_bands()), &
                    P1W(crys%num_bands(), crys%num_bands(), 3), &
                    P2W(crys%num_bands(), crys%num_bands(), 3, 3), &
-                   P3W(crys%num_bands(), crys%num_bands(), 3, 3, 3)
+                   P3W(crys%num_bands(), crys%num_bands(), 3, 3, 3), &
+                   P4W(crys%num_bands(), crys%num_bands(), 3, 3, 3, 3)
 
-    type(container) :: DHW, DDHW, DDDHW, DAW, DDAW
+    type(container) :: DHW, DDHW, DDDHW, DDDDHW, &
+                       DAW, DDAW, DDDAW
 
     quasienergy = cmplx_0
 
@@ -259,6 +266,44 @@ contains
                                    DDAW=DDAW, &
                                    P1W=P1W, &
                                    P2W=P2W)
+      case (4)  !Velocity gauge: 5 terms in expansion.
+        DHW = crys%hamiltonian(kpt=k, derivative=1)
+        P1W = wannier_momentum(HW=HW, &
+                               DHW=DHW, &
+                               AW=AW)
+        DDHW = crys%hamiltonian(kpt=k, derivative=2)
+        DAW = crys%berry_connection(kpt=k, derivative=1)
+        P2W = wannier_2nd_momentum(HW=HW, &
+                                   DHW=DHW, &
+                                   DDHW=DDHW, &
+                                   AW=AW, &
+                                   DAW=DAW, &
+                                   P1W=P1W)
+        DDDHW = crys%hamiltonian(kpt=k, derivative=3)
+        DDAW = crys%berry_connection(kpt=k, derivative=2)
+        P3W = wannier_3rd_momentum(HW=HW, &
+                                   DHW=DHW, &
+                                   DDHW=DDHW, &
+                                   DDDHW=DDDHW, &
+                                   AW=AW, &
+                                   DAW=DAW, &
+                                   DDAW=DDAW, &
+                                   P1W=P1W, &
+                                   P2W=P2W)
+        DDDDHW = crys%hamiltonian(kpt=k, derivative=4)
+        DDDAW = crys%berry_connection(kpt=k, derivative=3)
+        P4W = wannier_4th_momentum(HW=HW, &
+                                   DHW=DHW, &
+                                   DDHW=DDHW, &
+                                   DDDHW=DDDHW, &
+                                   DDDDHW=DDDDHW, &
+                                   AW=AW, &
+                                   DAW=DAW, &
+                                   DDAW=DDAW, &
+                                   DDDAW=DDDAW, &
+                                   P1W=P1W, &
+                                   P2W=P2W, &
+                                   P3W=P3W)
       end select
 
       Nharm = (self%cdims%rank() - 2)/6
@@ -340,12 +385,22 @@ contains
 
           case (3) !Velocity gauge: 4 terms in expansion.
             !The interaction term is V(t) = e*Q(t)*p/m + \sum_{ij} e^2*Q_j(t)*Q_i(t)*[D^j, [D^i, H]]/2\hbar^2 +
-            !\sum_{ijl} e^3*Q_l(t)*Q_j(t)*Q_i(t)*[D^l, [D^j, [D^i, H]]]/6\hbar^2
+            !\sum_{ijl} e^3*Q_l(t)*Q_j(t)*Q_i(t)*[D^l, [D^j, [D^i, H]]]/6\hbar^3
             !Q(t) = -\int dt E(t).
 
             q = A_field(amplitudes, phases, omega, tper, t0) !In A^-1
 
             H_TK = htk_v_4_terms(HW, P1W, P2W, P3W, q) !In eV.
+
+          case (4) !Velocity gauge: 4 terms in expansion.
+            !The interaction term is V(t) = e*Q(t)*p/m + \sum_{ij} e^2*Q_j(t)*Q_i(t)*[D^j, [D^i, H]]/2\hbar^2 +
+            !\sum_{ijl} e^3*Q_l(t)*Q_j(t)*Q_i(t)*[D^l, [D^j, [D^i, H]]]/6\hbar^3 +
+            !\sum_{ijlo} e^4*Q_o(t)*Q_l(t)*Q_j(t)*Q_i(t)*[D^o, [D^l, [D^j, [D^i, H]]]]/24\hbar^4
+            !Q(t) = -\int dt E(t).
+
+            q = A_field(amplitudes, phases, omega, tper, t0) !In A^-1
+
+            H_TK = htk_v_5_terms(HW, P1W, P2W, P3W, P4W, q) !In eV.
 
           end select
 
@@ -374,193 +429,5 @@ contains
     end select
 
   end function quasienergy
-
-  pure function E_field(amplitudes, phases, omega, t) result(q)
-
-    real(dp), intent(in) :: amplitudes(:, :), phases(:, :), &
-                            omega, t
-
-    real(dp) :: q(3)
-
-    integer :: icoord, iharm
-
-    q = 0.0_dp
-
-    do iharm = 1, size(amplitudes(:, 1))
-      do icoord = 1, 3
-        q(icoord) = q(icoord) + &
-                    amplitudes(iharm, icoord)*cos(iharm*omega*t - phases(iharm, icoord))
-      enddo
-    enddo
-
-    !q is now the driving electric field E(t), in V/m.
-    !We want q to represent e*E(t) in eV/A, so we multiply it by
-    !|e| to pass it to J/m and then divide it by
-    !|e| to pass it to eV/m.
-    !Lastly pass to eV/A by multiplying by 1^-10.
-    q = q*1.0E-10_dp
-
-  end function E_field
-
-  pure function A_field(amplitudes, phases, omega, t, t0) result(q)
-
-    real(dp), intent(in) :: amplitudes(:, :), phases(:, :), &
-                            omega, t, t0
-
-    real(dp) :: q(3)
-
-    integer :: icoord, iharm
-
-    q = 0.0_dp
-
-    do iharm = 1, size(amplitudes(:, 1))
-      do icoord = 1, 3
-        q(icoord) = q(icoord) + &
-                    amplitudes(iharm, icoord)* &
-                    (sin(iharm*omega*t - phases(iharm, icoord)) - sin(iharm*omega*t0 - phases(iharm, icoord)))/ &
-                    (iharm*omega)
-      enddo
-    enddo
-
-    q = -q
-
-    !q is now the integral of the driving electric field, in V/(m*eV).
-    !We want q to represent e*Q(t)/m in A^-1. (E(t) = dQ(t)/dt), so
-    !we have to multiply by e to obatin the integral of the driving force field in J/(m*eV)
-    !then divide by |e| to obain it in 1/m. Lastly pass to 1/A by multiplying by 1^-10.
-    q = q*1.0E-10_dp
-    !That is, in reality q holds e*A/\hbar.
-
-  end function A_field
-
-  pure function htk_l_no_intra_appr(eig, AH, q) result(H_TK)
-    real(dp), intent(in)    :: q(3), eig(:)
-    complex(dp), intent(in) :: AH(:, :, :)
-    complex(dp)             :: H_TK(size(eig), size(eig))
-
-    integer :: n, m
-
-    H_TK = cmplx_0
-    do n = 1, size(eig)
-      H_TK(n, n) = cmplx(eig(n), 0.0_dp, dp)
-      do m = 1, size(eig)
-        if (n == m) cycle
-        H_TK(n, m) = sum(q*AH(n, m, :))
-      enddo
-    enddo
-  end function htk_l_no_intra_appr
-
-  function htk_v_no_curv_appr(HH, AH, q) result(H_TK)
-    complex(dp), intent(in) :: HH(:, :), AH(:, :, :)
-    real(dp), intent(in)    :: q(3)
-    complex(dp)             :: H_TK(size(HH(:, 1)), size(HH(:, 1)))
-
-    complex(dp) :: rtimesA(size(HH(:, 1)), size(HH(:, 1)))
-    integer :: n, i
-
-    rtimesA = cmplx_0
-    do i = 1, 3
-      rtimesA = rtimesA + AH(:, :, i)*q(i)
-    enddo
-    do n = 1, size(HH(:, 1))
-      rtimesA(n, n) = cmplx_0
-    enddo
-
-    H_TK = matmul(expsh(-cmplx_i*rtimesA), &
-                  matmul(HH, expsh(cmplx_i*rtimesA)))
-
-  end function htk_v_no_curv_appr
-
-  pure function htk_v_2_terms(HW, P1W, q) result(H_TK)
-    real(dp), intent(in)    :: q(3)
-    complex(dp), intent(in) :: HW(:, :), &
-                               P1W(:, :, :)
-    complex(dp)             :: H_TK(size(HW(:, 1)), size(HW(:, 1)))
-
-    integer :: n, m
-
-    H_TK = HW
-
-    do n = 1, size(HW(:, 1))
-      do m = 1, size(HW(:, 1))
-        H_TK(n, m) = H_TK(n, m) + &
-                     sum(q*P1W(n, m, :))
-      enddo
-    enddo
-  end function htk_v_2_terms
-
-  pure function htk_v_3_terms(HW, P1W, P2W, q) result(H_TK)
-    real(dp), intent(in)    :: q(3)
-    complex(dp), intent(in) :: HW(:, :), &
-                               P1W(:, :, :), &
-                               P2W(:, :, :, :)
-    complex(dp)             :: H_TK(size(HW(:, 1)), size(HW(:, 1)))
-
-    integer :: n, m, i, j
-
-    H_TK = HW
-
-    do m = 1, size(HW(:, 1))
-      do n = 1, size(HW(:, 1))
-        H_TK(n, m) = H_TK(n, m) + &
-                     sum(q*P1W(n, m, :))
-      enddo
-    enddo
-
-    do j = 1, 3
-      do i = 1, 3
-        do m = 1, size(HW(:, 1))
-          do n = 1, size(HW(:, 1))
-            H_TK(n, m) = H_TK(n, m) + &
-                         q(i)*q(j)*P2W(n, m, i, j)/(2.0_dp)
-          enddo
-        enddo
-      enddo
-    enddo
-  end function htk_v_3_terms
-
-  pure function htk_v_4_terms(HW, P1W, P2W, P3W, q) result(H_TK)
-    real(dp), intent(in)    :: q(3)
-    complex(dp), intent(in) :: HW(:, :), &
-                               P1W(:, :, :), &
-                               P2W(:, :, :, :), &
-                               P3W(:, :, :, :, :)
-    complex(dp)             :: H_TK(size(HW(:, 1)), size(HW(:, 1)))
-
-    integer :: n, m, i, j, l
-
-    H_TK = HW
-
-    do m = 1, size(HW(:, 1))
-      do n = 1, size(HW(:, 1))
-        H_TK(n, m) = H_TK(n, m) + &
-                     sum(q*P1W(n, m, :))
-      enddo
-    enddo
-
-    do j = 1, 3
-      do i = 1, 3
-        do m = 1, size(HW(:, 1))
-          do n = 1, size(HW(:, 1))
-            H_TK(n, m) = H_TK(n, m) + &
-                         q(i)*q(j)*P2W(n, m, i, j)/(2.0_dp)
-          enddo
-        enddo
-      enddo
-    enddo
-
-    do l = 1, 3
-      do j = 1, 3
-        do i = 1, 3
-          do m = 1, size(HW(:, 1))
-            do n = 1, size(HW(:, 1))
-              H_TK(n, m) = H_TK(n, m) + &
-                           q(i)*q(j)*q(l)*P3W(n, m, i, j, l)/(6.0_dp)
-            enddo
-          enddo
-        enddo
-      enddo
-    enddo
-  end function htk_v_4_terms
 
 end module Quasienergies

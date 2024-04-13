@@ -31,6 +31,9 @@ program BC2N_Driving_Scan
   ! interaction.                             !
   ! #3: Velocity gauge: A*p + A*A*P2W +      !
   !                     A*A*A*P3W            !
+  ! #4: Velocity gauge: A*p + A*A*P2W +      !
+  !                     A*A*A*P3W +          !
+  !                     A*A*A*A*P4W          !
   ! interaction.                             !
   !                                          !
   !==========================================!
@@ -81,8 +84,8 @@ program BC2N_Driving_Scan
   max = 11.0_dp  !10E11 V/m.
 
   !GET QUASIENERGY SPECTRUM
-  !FOR METHODS #-1, #0, #1, #2, #3.
-  do method = -1, 3
+  !FOR METHODS #-1, #0, #1, #2, #3, #4.
+  do method = -1, 4
 
     call MPI_task_partition(task_size=Ns, nodes=nProcs, &
                             counts=counts, displs=displs)
