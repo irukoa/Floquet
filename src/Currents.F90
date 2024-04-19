@@ -1,9 +1,10 @@
-module Quasienergies
+module Currents
 
   use SsTC_driver, only: container, task_specifier, crystal, &
-    diagonalize, expsh, logu
+    diagonalize, expsh, logu, dirac_delta
+  use Extrapolation_Integration, only: extrapolation
   use Floquet_kinds, only: dp
-  use Floquet_defs, only: cmplx_0, cmplx_i, pi
+  use Floquet_defs, only: cmplx_0, cmplx_1, cmplx_i, pi
   use Floquet_Time_Dependent_defs, only: E_field, A_field, &
     htk_l_no_intra_appr, htk_v_no_curv_appr, &
     htk_v_2_terms, htk_v_3_terms, &
@@ -17,18 +18,22 @@ module Quasienergies
   implicit none
   private
 
-  public :: quasienergies_calc_tsk
+  public :: currents_calc_tsk
 
-  type, extends(task_specifier) :: quasienergies_calc_tsk
+  type, extends(task_specifier) :: currents_calc_tsk
     private
     integer :: Nt = 513
+    integer :: Ns = 10
     integer :: c_way = 1
+    real(dp) :: delta_smr = 0.1_dp
     logical :: f_initialized = .false.
   contains
     private
     procedure, pass(self), public :: build_floquet_task => constructor
     procedure, pass(self), public :: ntsteps => get_Nt
+    procedure, pass(self), public :: nsharms => get_Ns
     procedure, pass(self), public :: htk_calc_method => get_c_way
+    procedure, pass(self), public :: smr => get_delta_smr
     procedure, pass(self), public :: is_floquet_initialized => f_initialized
   end type
 
@@ -44,9 +49,11 @@ contains
                          pzstart, pzend, pzsteps, &
                          omegastart, omegaend, omegasteps, &
                          t0start, t0end, t0steps, &
-                         Nt, htk_calc_method)
+                         lambdastart, lambdaend, lambdasteps, &
+                         delta_smr, &
+                         Nt, Ns, htk_calc_method)
 
-    class(quasienergies_calc_tsk), intent(out) :: self
+    class(currents_calc_tsk), intent(out) :: self
 
     type(crystal), intent(in)  :: crys
 
@@ -63,14 +70,17 @@ contains
                                              azsteps, pzsteps
 
     real(dp), intent(in) :: omegastart, omegaend, &
-                            t0start, t0end
+                            t0start, t0end, &
+                            lambdastart, lambdaend
 
-    integer, intent(in) :: omegasteps, t0steps
+    integer, intent(in) :: omegasteps, t0steps, lambdasteps
 
-    integer, optional, intent(in) :: Nt, htk_calc_method
+    real(dp), optional, intent(in) :: delta_smr
 
-    real(dp), dimension(6*Nharm + 2) :: start, end
-    integer, dimension(6*Nharm + 2) :: steps
+    integer, optional, intent(in) :: Nt, Ns, htk_calc_method
+
+    real(dp), dimension(6*Nharm + 3) :: start, end
+    integer, dimension(6*Nharm + 3) :: steps
     integer :: iharm
 
     if (.not. crys%initialized()) error stop "Floquet: Error #1: crys must be initialized."
@@ -121,16 +131,30 @@ contains
     end(6*Nharm + 2) = omegaend
     steps(6*Nharm + 2) = omegasteps
 
-    call self%construct(name="quasienergies", &
-                        int_ind=[crys%num_bands()], &
+    start(6*Nharm + 3) = lambdastart
+    end(6*Nharm + 3) = lambdaend
+    steps(6*Nharm + 3) = lambdasteps
+
+    call self%construct(name="currents", &
+                        int_ind=[3], &
                         cont_data_start=start, &
                         cont_data_end=end, &
                         cont_data_steps=steps, &
-                        calculator=quasienergy)
+                        calculator=current)
+
+    if (present(delta_smr)) then
+      if (delta_smr < 0.0_dp) error stop "Floquet: Error #1: delta_smr must be positive and real."
+      self%delta_smr = delta_smr
+    endif
 
     if (present(Nt)) then
       if (Nt < 1) error stop "Floquet: Error #1: Nt must be a positive integer."
       self%Nt = Nt
+    endif
+
+    if (present(Ns)) then
+      if (Nt < 1) error stop "Floquet: Error #1: Ns must be a positive integer."
+      self%Ns = Ns
     endif
 
     if (present(htk_calc_method)) then
@@ -147,34 +171,47 @@ contains
   end subroutine
 
   pure elemental integer function get_Nt(self)
-    class(quasienergies_calc_tsk), intent(in) :: self
+    class(currents_calc_tsk), intent(in) :: self
     if (.not. self%f_initialized) error stop "Floquet: Error #2: Floquet task is not initialized."
     get_Nt = self%Nt
   end function get_Nt
 
+  pure elemental integer function get_Ns(self)
+    class(currents_calc_tsk), intent(in) :: self
+    if (.not. self%f_initialized) error stop "Floquet: Error #2: Floquet task is not initialized."
+    get_Ns = self%Ns
+  end function get_Ns
+
   pure elemental integer function get_c_way(self)
-    class(quasienergies_calc_tsk), intent(in) :: self
+    class(currents_calc_tsk), intent(in) :: self
     if (.not. self%f_initialized) error stop "Floquet: Error #2: Floquet task is not initialized."
     get_c_way = self%c_way
   end function get_c_way
 
+  pure elemental function get_delta_smr(self)
+    class(currents_calc_tsk), intent(in) :: self
+    real(dp) :: get_delta_smr
+    if (.not. self%f_initialized) error stop "Floquet: Error #2: Floquet task is not initialized."
+    get_delta_smr = self%delta_smr
+  end function get_delta_smr
+
   pure elemental logical function f_initialized(self)
-    class(quasienergies_calc_tsk), intent(in) :: self
+    class(currents_calc_tsk), intent(in) :: self
     f_initialized = self%f_initialized
   end function f_initialized
 
-  function quasienergy(self, crys, k, other)
+  function current(self, crys, k, other)
     class(task_specifier), intent(in) :: self
     class(crystal), intent(in) :: crys
     real(dp), intent(in) :: k(3)
     class(*), optional, intent(in) :: other
 
-    complex(dp) :: quasienergy(self%idims%size(), self%cdims%size())
+    complex(dp) :: current(self%idims%size(), self%cdims%size())
 
-    integer :: r_mem, r_arr(self%cdims%rank()), &
+    integer :: r_mem, rp_mem, r_arr(self%cdims%rank()), &
                i_mem
 
-    real(dp) :: omega, t0, dt, &
+    real(dp) :: omega, t0, lambda, dt, &
                 tper, q(3), &
                 quasi(crys%num_bands()), &
                 eig(crys%num_bands())
@@ -182,13 +219,15 @@ contains
     real(dp), allocatable :: amplitudes(:, :), &
                              phases(:, :)
 
-    integer :: Nharm, iharm, it, i
+    integer :: Nharm, iharm, it, is, ir, i, n, m, l, p, ilambda, &
+               cdims_shp(self%cdims%rank())
 
     complex(dp) :: H_TK(crys%num_bands(), crys%num_bands()), &
                    expH_TK(crys%num_bands(), crys%num_bands()), &
-                   tev(crys%num_bands(), crys%num_bands()), &
                    hf(crys%num_bands(), crys%num_bands()), &
-                   rot(crys%num_bands(), crys%num_bands()), &
+                   rotH(crys%num_bands(), crys%num_bands()), &
+                   rotF(crys%num_bands(), crys%num_bands()), &
+                   rho(crys%num_bands(), crys%num_bands()), &
                    AW(crys%num_bands(), crys%num_bands(), 3), &
                    NAD(crys%num_bands(), crys%num_bands(), 3), &
                    AH(crys%num_bands(), crys%num_bands(), 3), &
@@ -197,43 +236,59 @@ contains
                    P1W(crys%num_bands(), crys%num_bands(), 3), &
                    P2W(crys%num_bands(), crys%num_bands(), 3, 3), &
                    P3W(crys%num_bands(), crys%num_bands(), 3, 3, 3), &
-                   P4W(crys%num_bands(), crys%num_bands(), 3, 3, 3, 3)
+                   P4W(crys%num_bands(), crys%num_bands(), 3, 3, 3, 3), &
+                   tmp
+
+    complex(dp), allocatable :: tev(:, :, :), pt(:, :, :, :), qs(:, :, :)
+
+    integer, allocatable :: dims(:), pperm(:, :)
 
     type(container) :: DHW, DDHW, DDDHW, DDDDHW, &
                        DAW, DDAW, DDDAW
 
-    quasienergy = cmplx_0
+    cdims_shp = self%cdims%shape()
+
+    current = cmplx_0
 
     HW = crys%hamiltonian(kpt=k)
     AW = crys%berry_connection(kpt=k)
 
+    DHW = crys%hamiltonian(kpt=k, derivative=1)
+    P1W = wannier_momentum(HW=HW, &
+                           DHW=DHW, &
+                           AW=AW)
+
+    call diagonalize(matrix=HW, P=rotH, D=HH, eig=eig)
+
+    rho = cmplx_0
+    !Get occupation matrix in the H gauge.
+    do i = 1, crys%num_bands()
+      if (eig(i) <= crys%fermi_energy()) rho(i, i) = cmplx_1
+    enddo
+
     select type (self)
-    type is (quasienergies_calc_tsk)
+    type is (currents_calc_tsk)
       if (.not. self%f_initialized) error stop "Floquet: Error #2: Floquet task is not initialized."
       !Gather required quantities depending on the method to calculate H(k, t).
       select case (self%c_way)
       case (-1, 0)
         !-1: Length gauge: no-intraband appr.
         ! 0: Velocity gauge: no k-curvature appr.
-        call diagonalize(matrix=HW, P=rot, D=HH, eig=eig)
         NAD = NADHW(eig=eig, &
-                    rot=rot, &
+                    rot=rotH, &
                     DHW=crys%hamiltonian(kpt=k, derivative=1), &
                     deg_thr=0.01_dp, deg_offset=0.04_dp)
         do i = 1, 3
-          AH(:, :, i) = matmul(matmul(transpose(conjg(rot)), AW(:, :, i)), rot) + &
+          AH(:, :, i) = matmul(matmul(transpose(conjg(rotH)), AW(:, :, i)), rotH) + &
                         cmplx_i*NAD(:, :, i)
         enddo
       case (1)  !Velocity gauge: 2 terms in expansion.
-        DHW = crys%hamiltonian(kpt=k, derivative=1)
-        P1W = wannier_momentum(HW=HW, &
-                               DHW=DHW, &
-                               AW=AW)
+        !All quantities already calculated.
+        !Rotate rho back to W gauge if c_way >= 1.
+        rho = matmul(rotH, matmul(rho, transpose(conjg(rotH))))
       case (2)  !Velocity gauge: 3 terms in expansion.
-        DHW = crys%hamiltonian(kpt=k, derivative=1)
-        P1W = wannier_momentum(HW=HW, &
-                               DHW=DHW, &
-                               AW=AW)
+        !Rotate rho back to W gauge if c_way >= 1.
+        rho = matmul(rotH, matmul(rho, transpose(conjg(rotH))))
         DDHW = crys%hamiltonian(kpt=k, derivative=2)
         DAW = crys%berry_connection(kpt=k, derivative=1)
         P2W = wannier_2nd_momentum(HW=HW, &
@@ -243,10 +298,8 @@ contains
                                    DAW=DAW, &
                                    P1W=P1W)
       case (3)  !Velocity gauge: 4 terms in expansion.
-        DHW = crys%hamiltonian(kpt=k, derivative=1)
-        P1W = wannier_momentum(HW=HW, &
-                               DHW=DHW, &
-                               AW=AW)
+        !Rotate rho back to W gauge if c_way >= 1.
+        rho = matmul(rotH, matmul(rho, transpose(conjg(rotH))))
         DDHW = crys%hamiltonian(kpt=k, derivative=2)
         DAW = crys%berry_connection(kpt=k, derivative=1)
         P2W = wannier_2nd_momentum(HW=HW, &
@@ -267,10 +320,8 @@ contains
                                    P1W=P1W, &
                                    P2W=P2W)
       case (4)  !Velocity gauge: 5 terms in expansion.
-        DHW = crys%hamiltonian(kpt=k, derivative=1)
-        P1W = wannier_momentum(HW=HW, &
-                               DHW=DHW, &
-                               AW=AW)
+        !Rotate rho back to W gauge if c_way >= 1.
+        rho = matmul(rotH, matmul(rho, transpose(conjg(rotH))))
         DDHW = crys%hamiltonian(kpt=k, derivative=2)
         DAW = crys%berry_connection(kpt=k, derivative=1)
         P2W = wannier_2nd_momentum(HW=HW, &
@@ -306,17 +357,28 @@ contains
                                    P3W=P3W)
       end select
 
-      Nharm = (self%cdims%rank() - 2)/6
+      Nharm = (self%cdims%rank() - 3)/6
       allocate (amplitudes(Nharm, 3), phases(Nharm, 3))
+      allocate (tev(crys%num_bands(), crys%num_bands(), self%Nt))
+      allocate (pt(self%Nt, -self%Ns:self%Ns, crys%num_bands(), crys%num_bands()))
+      allocate (qs(-self%Ns:self%Ns, crys%num_bands(), crys%num_bands()))
 
-      !Loop for each external variable.
-      do r_mem = 1, self%cdims%size()
+      !Here we create a partial permutation dictionary,
+      !iterating for all variables except lambda.
+      allocate (dims(self%cdims%rank() - 1))
+      do i = 1, size(dims)
+        dims(i) = i
+      enddo
+      pperm = self%cdims%partial_permutation(dims)
 
-        r_arr = self%cdims%ind(r_mem)
+      !Loop for each external variable except lambda.
+      do rp_mem = 1, size(pperm(:, 1))
 
-        omega = self%cdt(var=self%cdims%rank(), step=r_arr(self%cdims%rank()))
+        r_arr = pperm(rp_mem, :)
 
-        t0 = self%cdt(var=self%cdims%rank() - 1, step=r_arr(self%cdims%rank() - 1))
+        omega = self%cdt(var=self%cdims%rank() - 1, step=r_arr(self%cdims%rank() - 1))
+
+        t0 = self%cdt(var=self%cdims%rank() - 2, step=r_arr(self%cdims%rank() - 2))
 
         do iharm = 1, Nharm
           amplitudes(iharm, 1) = self%cdt(var=6*(iharm - 1) + 1, step=r_arr(6*(iharm - 1) + 1))
@@ -330,7 +392,7 @@ contains
         dt = (2*pi/omega)/real(self%Nt - 1, dp)
         tev = cmplx_0
         do i = 1, crys%num_bands()
-          tev(i, i) = cmplx(1.0_dp, 0.0_dp, dp)
+          tev(i, i, 1) = cmplx(1.0_dp, 0.0_dp, dp)
         enddo
 
         do it = 2, self%Nt
@@ -408,26 +470,92 @@ contains
           expH_TK = expsh(-cmplx_i*dt*H_TK)
 
           !Accumulate.
-          tev = matmul(tev, expH_TK)
+          tev(:, :, it) = matmul(tev(:, :, it - 1), expH_TK)
 
         enddo
 
-        !Get effective Floquet Hamiltonian in:
+        !get the effective Floquet Hamiltonian.
+        hf = cmplx_i*omega*logu(tev(:, :, self%Nt))/(2*pi)
+
+        !Get P(t) = U(t)e^{-i*H_F*t}, and multiply by
+        !e^{-i*s*w*t}/(Nt - 1), so we also get the integrand of T*Q_s.
+        do is = -self%Ns, self%Ns
+          do it = 1, self%Nt
+            tper = t0 + dt*real(it - 1, dp) !In eV^-1.
+            pt(it, is, :, :) = matmul(tev(:, :, it), expsh(cmplx_i*tper*hf))
+            pt(it, is, :, :) = pt(it, is, :, :)*exp(-cmplx_i*real(is, dp)*omega*tper)/real(self%Nt - 1, dp)
+          enddo
+        enddo
+
+        !Get Q_s.
+        do m = 1, crys%num_bands()
+          do n = 1, crys%num_bands()
+            do is = -self%Ns, self%Ns
+              qs(is, n, m) = extrapolation(pt(:, is, n, m))
+            enddo
+          enddo
+        enddo
+
+        !Right now the effective Floquet Hamiltonian, rho and Q_s are in:
         ! - Hamiltonian basis if c_way = -1, 0.
         ! - Wannier basis if c_way = 1, 2, 3, 4.
-        hf = cmplx_i*omega*logu(tev)/(2*pi)
-        call diagonalize(matrix=hf, P=rot, eig=quasi)
+        !And, the momentum is in the Wannier basis.
+        !If c_way <= 0 then, we rotate the momentum to the Hamiltonian basis.
+        if (self%c_way <= 0) then
+          do i = 1, 3
+            P1W(:, :, i) = matmul(matmul(transpose(conjg(rotH)), P1W(:, :, i)), rotH)
+          enddo
+        endif
 
-        do i_mem = 1, self%idims%size()
-          quasienergy(i_mem, r_mem) = quasi(i_mem)
+        call diagonalize(matrix=hf, P=rotF, eig=quasi)
+        !Now, rotF holds the unitary rotation from the Wannier or Hamiltonian basis to the
+        !Floquet basis.
+
+        !Rotate Q_s, rho and the momentum to the Floquet basis
+        do is = -self%Ns, self%Ns
+          qs(is, :, :) = matmul(matmul(transpose(conjg(rotF)), qs(is, :, :)), rotF)
+        enddo
+        rho = matmul(matmul(transpose(conjg(rotF)), rho), rotF)
+        do i = 1, 3
+          P1W(:, :, i) = matmul(matmul(transpose(conjg(rotF)), P1W(:, :, i)), rotF)
+        enddo
+
+        !Compute the Fourier transform of the current exactly.
+        do i = 1, 3
+          do ilambda = 1, cdims_shp(self%cdims%rank())
+            !Iterate now over lambda.
+            r_arr(self%cdims%rank()) = ilambda
+            !Get memory layout index and lambda.
+            r_mem = self%cdims%ind(r_arr)
+            lambda = self%cdt(var=self%cdims%rank(), step=r_arr(self%cdims%rank()))
+            !Get current.
+            tmp = cmplx_0
+!$OMP             SIMD COLLAPSE(6) REDUCTION (+: tmp)
+            do n = 1, crys%num_bands()
+            do m = 1, crys%num_bands()
+            do l = 1, crys%num_bands()
+            do p = 1, crys%num_bands()
+            do ir = -self%Ns, self%Ns
+            do is = -self%Ns, self%Ns
+              tmp = tmp + rho(n, m)*P1W(l, p, i)*conjg(qs(is, l, m))*qs(ir, p, n)* &
+                    dirac_delta(quasi(n) - quasi(m) + real(ir - is, dp)*omega - lambda, self%delta_smr)
+            enddo
+            enddo
+            enddo
+            enddo
+            enddo
+            enddo
+!$OMP             END SIMD
+            current(i, r_mem) = tmp
+          enddo
         enddo
 
       enddo
 
-      deallocate (amplitudes, phases)
+      deallocate (tev, pt, qs, amplitudes, phases, dims, pperm)
 
     end select
 
-  end function quasienergy
+  end function current
 
-end module Quasienergies
+end module Currents

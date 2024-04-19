@@ -1,4 +1,4 @@
-module Functionality_Suite
+module Q_Functionality_Suite
   use, intrinsic :: iso_fortran_env, only: error_unit
   use MPI
   use OMP_LIB
@@ -92,4 +92,4 @@ contains
 
   end subroutine get_quasienergies_of_BC2N
 
-end module Functionality_Suite
+end module Q_Functionality_Suite

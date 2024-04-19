@@ -1,11 +1,11 @@
-module Q_Randomized_Suite
+module C_Randomized_Suite
   use, intrinsic :: iso_fortran_env, only: error_unit
   use MPI
   use OMP_LIB
 
   use Floquet_kinds, only: dp
   use Floquet_defs, only: pi
-  use Quasienergies, only: quasienergies_calc_tsk
+  use Currents, only: currents_calc_tsk
   use WannInt, only: crystal
 
   use testdrive, only: error_type
@@ -24,11 +24,11 @@ contains
     type(error_type), allocatable, intent(out) :: error
 
     type(crystal) :: BC2N
-    type(quasienergies_calc_tsk) :: tsk
+    type(currents_calc_tsk) :: tsk
 
-    real(dp) :: klist(3, 1), rNH, omgst, omgnd, t0st, t0nd, rnt
+    real(dp) :: klist(3, 1), rNH, omgst, omgnd, t0st, t0nd, rnt, lmdst, lmdnd, rns, rsmr
     complex(dp), allocatable :: store_at(:, :, :)
-    integer :: ic_way, i, j, NH, NT
+    integer :: ic_way, i, j, NH, NT, NS
 
     real(dp), allocatable :: rndff(:, :), rrndstps(:, :)
     integer, allocatable :: rndstps(:, :)
@@ -50,7 +50,7 @@ contains
     NH = nint(1.0_dp + 0.0_dp*rNH)
     !NH = 1 !DBG.
     call MPI_BCAST(NH, 1, MPI_INTEGER, 0, MPI_COMM_WORLD, ierror)
-    allocate (rndff(12, NH), rrndstps(8, NH), rndstps(8, NH))
+    allocate (rndff(12, NH), rrndstps(9, NH), rndstps(9, NH))
     call random_number(rndff)
     rndff = 10.0_dp**(5.0_dp + 7.0_dp*rndff)
     call MPI_BCAST(rndff, size(rndff), MPI_DOUBLE_PRECISION, 0, MPI_COMM_WORLD, ierror)
@@ -70,14 +70,27 @@ contains
     call random_number(t0nd)
     t0nd = (2*pi/omgst)*t0nd
     call MPI_BCAST(t0nd, 1, MPI_DOUBLE_PRECISION, 0, MPI_COMM_WORLD, ierror)
+    call random_number(lmdst)
+    lmdst = 0.05_dp + 3.15_dp*lmdst
+    call MPI_BCAST(omgst, 1, MPI_DOUBLE_PRECISION, 0, MPI_COMM_WORLD, ierror)
+    call random_number(lmdnd)
+    lmdnd = 0.05_dp + 3.15_dp*lmdnd
+    call MPI_BCAST(lmdnd, 1, MPI_DOUBLE_PRECISION, 0, MPI_COMM_WORLD, ierror)
     call random_number(rnt)
     NT = 2**(nint(1.0_dp + 9.0_dp*rnt)) + 1
     !NT = 2**(9) + 1 !DBG.
     call MPI_BCAST(NT, 1, MPI_INTEGER, 0, MPI_COMM_WORLD, ierror)
+    call random_number(rns)
+    NS = nint(1.0_dp + 14.0_dp*rns)
+    !NS = 15 !DBG.
+    call MPI_BCAST(NS, 1, MPI_INTEGER, 0, MPI_COMM_WORLD, ierror)
+    call random_number(rsmr)
+    call MPI_BCAST(rsmr, 1, MPI_DOUBLE_PRECISION, 0, MPI_COMM_WORLD, ierror)
 
     if (rank == 0) write (error_unit, "(A)") "Info:"
     if (rank == 0) write (error_unit, "(A, i0, A)") "  Number of harmonics = ", NH, "."
     if (rank == 0) write (error_unit, "(A, i0, A)") "  Number of t-points = ", NT, "."
+    if (rank == 0) write (error_unit, "(A, i0, A)") "  Number of omega-harmonics = ", NS, "."
 
     do ic_way = -1, 4
 
@@ -91,7 +104,9 @@ contains
                                   pzstart=rndff(11, :), pzend=rndff(12, :), pzsteps=rndstps(6, :), &
                                   omegastart=omgst, omegaend=omgnd, omegasteps=rndstps(7, 1), &
                                   t0start=t0st, t0end=t0nd, t0steps=rndstps(8, 1), &
-                                  Nt=NT, htk_calc_method=ic_way)
+                                  lambdastart=lmdst, lambdaend=lmdnd, lambdasteps=rndstps(9, 1), &
+                                  delta_smr=rsmr, &
+                                  Nt=NT, Ns=NS, htk_calc_method=ic_way)
 
       if ((rank == 0) .and. (ic_way == -1)) write (error_unit, "(A, i0, A)") "  Number of cont. variables = ", tsk%cdims%rank(), "."
       if ((rank == 0) .and. (ic_way == -1)) write (error_unit, "(A)") "  Shape = "
@@ -124,4 +139,4 @@ contains
 
   end subroutine randomized_input_parameters
 
-end module Q_Randomized_Suite
+end module C_Randomized_Suite
