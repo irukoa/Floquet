@@ -42,7 +42,7 @@ program BC2N_Current
   !Lambda: start, end, steps
   real(dp) :: lambda
   real(dp), parameter :: start = 0.0_dp, end = 10.0_dp
-  integer, parameter :: steps = 128
+  integer, parameter :: steps = 129
 
   !Sampling points discretization.
   integer :: kpart(3) = [100, 100, 1]
@@ -77,7 +77,7 @@ program BC2N_Current
                   kpart=kpart, &
                   store_at=store_at, &
                   parallelization="MPI+OMP")
-  !Right now, store_at holds the Fourier transform of the current
+  !Right now, store_at holds the Fourier transform of the current, j^l(\lambda),
   !in units of A (those of the momentum dH/dk - i[\xi, H] (eV*A)) times a delta function
   !with its argument having units of energy (1/eV).
   !We have to divide by the cell volume in A^3 and
@@ -111,6 +111,9 @@ program BC2N_Current
       real(store_at(3, i), dp), aimag(store_at(3, i))
   enddo
   if (rank == 0) close (unit=out)
+
+  !j^l(t) is related to j^l(\labmda) by
+  !j^l(t) = \int_{-\infty}^{\infty}d\lambda F(\lambda) e^{-i\lambda t}.
 
   call MPI_FINALIZE(ierror)
 
