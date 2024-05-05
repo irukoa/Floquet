@@ -163,13 +163,13 @@ contains
     f_initialized = self%f_initialized
   end function f_initialized
 
-  function quasienergy(self, crys, k, other)
+  function quasienergy(self, crys, k, other) result(qsn)
     class(task_specifier), intent(in) :: self
     class(crystal), intent(in) :: crys
     real(dp), intent(in) :: k(3)
     class(*), optional, intent(in) :: other
 
-    complex(dp) :: quasienergy(self%idims%size(), self%cdims%size())
+    complex(dp) :: qsn(self%idims%size(), self%cdims%size())
 
     integer :: r_mem, r_arr(self%cdims%rank()), &
                i_mem
@@ -202,7 +202,7 @@ contains
     type(container) :: DHW, DDHW, DDDHW, DDDDHW, &
                        DAW, DDAW, DDDAW
 
-    quasienergy = cmplx_0
+    qsn = cmplx_0
 
     HW = crys%hamiltonian(kpt=k)
     AW = crys%berry_connection(kpt=k)
@@ -419,7 +419,7 @@ contains
         call diagonalize(matrix=hf, P=rot, eig=quasi)
 
         do i_mem = 1, self%idims%size()
-          quasienergy(i_mem, r_mem) = quasi(i_mem)
+          qsn(i_mem, r_mem) = quasi(i_mem)
         enddo
 
       enddo

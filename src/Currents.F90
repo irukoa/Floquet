@@ -200,13 +200,13 @@ contains
     f_initialized = self%f_initialized
   end function f_initialized
 
-  function current(self, crys, k, other)
+  function current(self, crys, k, other) result(crr)
     class(task_specifier), intent(in) :: self
     class(crystal), intent(in) :: crys
     real(dp), intent(in) :: k(3)
     class(*), optional, intent(in) :: other
 
-    complex(dp) :: current(self%idims%size(), self%cdims%size())
+    complex(dp) :: crr(self%idims%size(), self%cdims%size())
 
     integer :: r_mem, rp_mem, r_arr(self%cdims%rank()), &
                i_mem
@@ -248,7 +248,7 @@ contains
 
     cdims_shp = self%cdims%shape()
 
-    current = cmplx_0
+    crr = cmplx_0
 
     HW = crys%hamiltonian(kpt=k)
     AW = crys%berry_connection(kpt=k)
@@ -478,12 +478,12 @@ contains
         hf = cmplx_i*omega*logu(tev(:, :, self%Nt))/(2*pi)
 
         !Get P(t) = U(t)e^{-i*H_F*t}, and multiply by
-        !e^{-i*s*w*t}/(Nt - 1), so we also get the integrand of T*Q_s.
+        !e^{-i*s*w*t}, so we also get the integrand of Q_s.
         do is = -self%Ns, self%Ns
           do it = 1, self%Nt
             tper = t0 + dt*real(it - 1, dp) !In eV^-1.
             pt(it, is, :, :) = matmul(tev(:, :, it), expsh(cmplx_i*tper*hf))
-            pt(it, is, :, :) = pt(it, is, :, :)*exp(-cmplx_i*real(is, dp)*omega*tper)/real(self%Nt - 1, dp)
+            pt(it, is, :, :) = pt(it, is, :, :)*exp(-cmplx_i*real(is, dp)*omega*tper)
           enddo
         enddo
 
@@ -546,7 +546,7 @@ contains
             enddo
             enddo
 !$OMP             END SIMD
-            current(i, r_mem) = tmp
+            crr(i, r_mem) = tmp
           enddo
         enddo
 
