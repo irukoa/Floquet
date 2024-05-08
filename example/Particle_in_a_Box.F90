@@ -163,7 +163,7 @@ program Particle_in_a_Box
     if (rank == 0) open (newunit=out, action="write", file="PiaB_QS-method_"//trim(adjustl(num))//".dat", status="unknown")
     do j = 1, nbnds
       do i = 1, Ns
-        if (rank == 0) write (unit=out, fmt="(F15.7, 2x, F15.7)") max_forc*(real(i - 1, dp)/real(N - 1, dp)), &
+        if (rank == 0) write (unit=out, fmt="(F15.7, 2x, F15.7)") max_forc*(real(i - 1, dp)/real(Ns - 1, dp)), &
           real(results(i, j), dp)/omega
       enddo
       if (rank == 0) write (unit=out, fmt="(a)") ""
