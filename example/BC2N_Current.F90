@@ -71,7 +71,7 @@ program BC2N_Current
                               lambdastart=start, lambdaend=end, lambdasteps=steps, &
                               t0start=0.0_dp, t0end=0.0_dp, t0steps=1, &
                               delta_smr=0.1_dp, &
-                              Nt=256, Ns=12, htk_calc_method=2)
+                              Nt=257, Ns=12, htk_calc_method=2)
 
   call tsk%sample(crys=BC2N, &
                   kpart=kpart, &
