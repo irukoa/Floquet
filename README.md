@@ -278,7 +278,7 @@ In the language of [SsTC](https://github.com/irukoa/SsTC_driver), a task has a n
 - Driving parameters $E^{\{x, y, z\}}_l$ (3 variables), $\varphi_l^{\{x, y, z\}}$  (3 variables) for each harmonic $l\in[1, N]$. Passed as $6\times N$ continuous indices.
 - Frequency $\omega$. Passed as a continuous index.
 - Starting time $t_0$. Passed as a continuous index.
-- - Frequency $\lambda$. Passed as a continuous index.
+- Frequency $\lambda$. Passed as a continuous index.
 
 Each of the $6\times N + 3$ continuous indices can be discretized in a number of steps by providing a suitable `*steps(Nharm)` entry. The continuous index labeling is the following:
 
