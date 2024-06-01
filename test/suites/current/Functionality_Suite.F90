@@ -72,7 +72,7 @@ contains
                                   omegastart=0.5_dp, omegaend=0.5_dp, omegasteps=1, &
                                   lambdastart=2.5_dp, lambdaend=2.5_dp, lambdasteps=1, &
                                   t0start=0.0_dp, t0end=0.0_dp, t0steps=1, &
-                                  delta_smr=0.1_dp, &
+                                  delta_smr=0.2_dp, &
                                   Nt=513, Ns=12, htk_calc_method=ic_way)
 
       call tsk%sample(BC2N, kpart, store_at, parallelization="none")

@@ -25,7 +25,7 @@ module Currents
     integer :: Nt = 513
     integer :: Ns = 10
     integer :: c_way = 1
-    real(dp) :: delta_smr = 0.1_dp
+    real(dp) :: delta_smr = 0.04_dp
     logical :: f_initialized = .false.
   contains
     private
@@ -214,7 +214,8 @@ contains
     real(dp) :: omega, t0, lambda, dt, &
                 tper, q(3), &
                 quasi(crys%num_bands()), &
-                eig(crys%num_bands())
+                eig(crys%num_bands()), &
+                smr
 
     real(dp), allocatable :: amplitudes(:, :), &
                              phases(:, :)
@@ -378,6 +379,8 @@ contains
 
         omega = self%cdt(var=self%cdims%rank() - 1, step=r_arr(self%cdims%rank() - 1))
 
+        smr = self%delta_smr*omega !Adaptive delta smearing, proportional to omega.
+
         t0 = self%cdt(var=self%cdims%rank() - 2, step=r_arr(self%cdims%rank() - 2))
 
         do iharm = 1, Nharm
@@ -538,7 +541,7 @@ contains
             do ir = -self%Ns, self%Ns
             do is = -self%Ns, self%Ns
               tmp = tmp + rho(n, m)*P1W(l, p, i)*conjg(qs(is, l, m))*qs(ir, p, n)* &
-                    dirac_delta(quasi(n) - quasi(m) + real(ir - is, dp)*omega - lambda, self%delta_smr)
+                    dirac_delta(quasi(n) - quasi(m) + real(ir - is, dp)*omega - lambda, smr)
             enddo
             enddo
             enddo

@@ -267,7 +267,7 @@ where
 - `real(dp), intent(in) :: lambdastart` is a real number corresponding to the starting point of the frequency $\lambda$ of $j^l(\lambda)$ to consider in the calculation.
 - `real(dp), intent(in) :: lambdaend` is a real number corresponding to the ending point of the frequency $\lambda$ of $j^l(\lambda)$ to consider in the calculation.
 - `integer, intent(in) :: lambdasteps` is a positive integer, containing the number of steps in the discretization of the of the frequency $\lambda$ of $j^l(\lambda)$ to consider in the calculation.. The variable is discretized as all other amplitudes and phases.
-- `real(dp), intent(in), optional :: delta_smr` is a positive real number specifying the smearing of the resonant delta function in eV. Default is 0.1 eV.
+- `real(dp), intent(in), optional :: delta_smr` is a positive real number $\sigma$ specifying the smearing of the resonant delta function, $\sigma \times \hbar \omega$, in eV. Default is $0.04 \times \hbar \omega$ in eV.
 - `integer, intent(in), optional :: Ns` is a integer $N_s$ specifying the number of harmonics $s\in[-N_s, N_s]$ in the calculation of $\hat{Q}_s$ for the calculation of the Fourier components of the time-periodic operator $\hat{P}(t)$. Default is $N_s = 10$ harmonics.
 
 ### Integer and continuous indices

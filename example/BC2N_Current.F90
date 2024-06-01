@@ -70,7 +70,7 @@ program BC2N_Current
                               omegastart=2.5_dp, omegaend=2.5_dp, omegasteps=1, &
                               lambdastart=start, lambdaend=end, lambdasteps=steps, &
                               t0start=0.0_dp, t0end=0.0_dp, t0steps=1, &
-                              delta_smr=0.1_dp, &
+                              delta_smr=0.04_dp, &
                               Nt=257, Ns=12, htk_calc_method=2)
 
   call tsk%sample(crys=BC2N, &
