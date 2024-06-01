@@ -303,7 +303,7 @@ Is called as,
 ```fortran
 smr = tsk%smr()
 ```
-where `real(dp) :: smr` is the smearing of the dirac delta function employed in the calculation in units of eV.
+where `real(dp) :: smr` is the smearing $\sigma$ of the Dirac delta function, $\sigma \times \hbar \omega$, employed in the calculation in units of eV.
 
 </details>
 
