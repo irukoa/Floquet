@@ -1,7 +1,10 @@
 [![Language](https://img.shields.io/badge/-Fortran-734f96?logo=fortran&logoColor=white)](https://github.com/topics/fortran)
-ZENODO
+[![DOI](https://zenodo.org/badge/771074363.svg)](https://zenodo.org/doi/10.5281/zenodo.13712821)
 [![Testing suite](https://github.com/irukoa/Floquet/actions/workflows/CI.yml/badge.svg)](https://github.com/irukoa/Floquet/actions/workflows/CI.yml)
 # Floquet
+
+**This is a work in progress!**
+
 This is a modern Fortran library, companion to Ref. [[1]](#ref1), which implements the computational scheme described in that reference to calculate the *effective Floquet Hamiltonian* of real materials and tight-binding models subjected to time-periodic driving fields.
 
 <details>
@@ -349,14 +352,8 @@ fpm run --example BC2N_Current
 
 respectively in the repository directory.
 
-# TODO
-- Upload to zenodo.
-- Update CITATION
-- When done, tag as v1.0.0 in fpm.toml, main.F90 and CITATION.
-- Release.
-
 <a id="ref1"></a>
-[1] Á. R. Puente-Uriona, M. Modugno, I. Souza, y J. Ibañez-Azpiroz, «Computing Floquet quasienergies in finite and extended systems: Role of electromagnetic and quantum-geometric gauges», [Phys. Rev. B, vol. 110, n.º 2, p. 125203](https://doi.org/10.1103/PhysRevB.110.125203), sep. 2024, DOI: 10.1103/PhysRevB.110.125203.
+[1] Á. R. Puente-Uriona, M. Modugno, I. Souza, and J. Ibañez-Azpiroz, «Computing Floquet quasienergies in finite and extended systems: Role of electromagnetic and quantum-geometric gauges», [Phys. Rev. B, vol. 110, iss. 2, p. 125203](https://doi.org/10.1103/PhysRevB.110.125203), sep. 2024, DOI: 10.1103/PhysRevB.110.125203.
 
 <a id="ref2"></a>
 [2] A. R. Puente-Uriona *et al*. In preparation.

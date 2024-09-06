@@ -10,18 +10,19 @@ authors:
     orcid: 'https://orcid.org/0000-0003-1915-8804'
 identifiers:
   - type: doi
-    value: ####
+    value: 10.5281/zenodo.13712822
     description: Zenodo
 repository-code: 'https://github.com/irukoa/Floquet'
 url: 'https://github.com/irukoa/Floquet'
 abstract: >-
   Floquet: a Fortran library implementing
   Floquet methods for quantum mechanical systems.
-  This code is a companion to Ref. [####],
-  a scientific paper on the methodological
-  implementation of the calculation of
+  This code is a companion to Ref. [1]
+  (see README.md), a scientific paper on the
+  methodological implementation of the calculation of
   quasienergies in quantum mechanical
   extended systems.
+  [1] Á. R. Puente-Uriona, M. Modugno, I. Souza, y J. Ibañez-Azpiroz, «Computing Floquet quasienergies in finite and extended systems: Role of electromagnetic and quantum-geometric gauges», [Phys. Rev. B, vol. 110, n.º 2, p. 125203](https://doi.org/10.1103/PhysRevB.110.125203), sep. 2024, DOI: 10.1103/PhysRevB.110.125203.
 keywords:
   - Fortran
   - Floquet methods
