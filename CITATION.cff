@@ -22,7 +22,7 @@ abstract: >-
   methodological implementation of the calculation of
   quasienergies in quantum mechanical
   extended systems.
-  [1] Á. R. Puente-Uriona, M. Modugno, I. Souza, y J. Ibañez-Azpiroz, «Computing Floquet quasienergies in finite and extended systems: Role of electromagnetic and quantum-geometric gauges», [Phys. Rev. B, vol. 110, n.º 2, p. 125203](https://doi.org/10.1103/PhysRevB.110.125203), sep. 2024, DOI: 10.1103/PhysRevB.110.125203.
+  [1] Á. R. Puente-Uriona, M. Modugno, I. Souza, y J. Ibañez-Azpiroz, «Computing Floquet quasienergies in finite and extended systems: Role of electromagnetic and quantum-geometric gauges», Phys. Rev. B, vol. 110, iss. 12, p. 125203, sep. 2024, DOI: 10.1103/PhysRevB.110.125203.
 keywords:
   - Fortran
   - Floquet methods

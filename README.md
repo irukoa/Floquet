@@ -353,7 +353,7 @@ fpm run --example BC2N_Current
 respectively in the repository directory.
 
 <a id="ref1"></a>
-[1] Á. R. Puente-Uriona, M. Modugno, I. Souza, and J. Ibañez-Azpiroz, «Computing Floquet quasienergies in finite and extended systems: Role of electromagnetic and quantum-geometric gauges», [Phys. Rev. B, vol. 110, iss. 2, p. 125203](https://doi.org/10.1103/PhysRevB.110.125203), sep. 2024, DOI: 10.1103/PhysRevB.110.125203.
+[1] Á. R. Puente-Uriona, M. Modugno, I. Souza, and J. Ibañez-Azpiroz, «Computing Floquet quasienergies in finite and extended systems: Role of electromagnetic and quantum-geometric gauges», [Phys. Rev. B, vol. 110, iss. 12, p. 125203](https://doi.org/10.1103/PhysRevB.110.125203), sep. 2024, DOI: 10.1103/PhysRevB.110.125203.
 
 <a id="ref2"></a>
 [2] A. R. Puente-Uriona *et al*. In preparation.
