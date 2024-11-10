@@ -480,13 +480,13 @@ contains
         !get the effective Floquet Hamiltonian.
         hf = cmplx_i*omega*logu(tev(:, :, self%Nt))/(2*pi)
 
-        !Get P(t) = U(t)e^{-i*H_F*t}, and multiply by
-        !e^{-i*s*w*t}, so we also get the integrand of Q_s.
+        !Get P(t) = U(t)e^{-i*H_F*(tper - t0)}, and multiply by
+        !e^{-i*s*w*(tper - t0)}, so we also get the integrand of Q_s.
         do is = -self%Ns, self%Ns
           do it = 1, self%Nt
             tper = t0 + dt*real(it - 1, dp) !In eV^-1.
             pt(it, is, :, :) = matmul(tev(:, :, it), expsh(cmplx_i*(tper - t0)*hf))
-            pt(it, is, :, :) = pt(it, is, :, :)*exp(-cmplx_i*real(is, dp)*omega*tper)
+            pt(it, is, :, :) = pt(it, is, :, :)*exp(-cmplx_i*real(is, dp)*omega*(tper - t0))
           enddo
         enddo
 
