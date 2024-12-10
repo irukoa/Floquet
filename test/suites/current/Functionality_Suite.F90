@@ -24,10 +24,14 @@ contains
     type(crystal) :: BC2N
     type(currents_calc_tsk) :: tsk
 
-    complex(dp) :: test(3), reference(-1:4, 3)
+    complex(dp) :: test(3), reference(-2:4, 3)
     integer :: kpart(3)
     complex(dp), allocatable :: store_at(:, :)
     integer :: ic_way
+
+    reference(-2, :) = [cmplx(-0.68103541231949760_dp, 46.611180003265154_dp, dp), &
+                        cmplx(0.10437311866695376_dp, -6.1668012171582856_dp, dp), &
+                        cmplx(0.23722429791929187_dp, 5.7509544340385643_dp, dp)]
 
     reference(-1, :) = [cmplx(-0.29307595102112804_dp, 0.13885565528784205_dp, dp), &
                         cmplx(-7.48012773389838681E-002_dp, 2.47111487422850308E-002_dp, dp), &
@@ -59,7 +63,7 @@ contains
                         from_file="./material_data/BC2N_tb.dat", &
                         fermi_energy=7.8461_dp)
 
-    do ic_way = -1, 4
+    do ic_way = -2, 4
 
       call tsk%build_floquet_task(crys=BC2N, &
                                   Nharm=1, &

@@ -7,7 +7,8 @@ module Quasienergies
   use Floquet_Time_Dependent_defs, only: E_field, A_field, &
     htk_l_no_intra_appr, htk_v_no_curv_appr, &
     htk_v_2_terms, htk_v_3_terms, &
-    htk_v_4_terms, htk_v_5_terms
+    htk_v_4_terms, htk_v_5_terms, &
+    htk_diagonal_TB
   use Floquet_Wannier_interpolation, only: wannier_momentum, &
     wannier_2nd_momentum, &
     wannier_3rd_momentum, &
@@ -135,10 +136,10 @@ contains
 
     if (present(htk_calc_method)) then
       select case (htk_calc_method)
-      case (-1:4)
+      case (-2:4)
         self%c_way = htk_calc_method
       case default
-        error stop "Floquet: Error #1: htk_calc_method must be an integer in the [-1, 4] range."
+        error stop "Floquet: Error #1: htk_calc_method must be an integer in the [-2, 4] range."
       end select
     endif
 
@@ -212,6 +213,7 @@ contains
       if (.not. self%f_initialized) error stop "Floquet: Error #2: Floquet task is not initialized."
       !Gather required quantities depending on the method to calculate H(k, t).
       select case (self%c_way)
+      case (-2) !Velocity gauge: tight-binding approximation.
       case (-1, 0)
         !-1: Length gauge: no-intraband appr.
         ! 0: Velocity gauge: no k-curvature appr.
@@ -339,6 +341,15 @@ contains
 
           !Calculate H(k, t) depending on the chosen method.
           select case (self%c_way)
+
+          case (-2) !Velocity gauge: tight-binding approximation.
+            !The Hamiltonian is defined in the Wannier state basis
+            !as H_nm(R, t) = H0_nm(R)e^(i*q*A*rtb_nm(R)/hbar),
+            !with rtb_nm(R) = A_{nn}(R=0) - A_{mm}(R=0) - R.
+
+            q = A_field(amplitudes, phases, omega, tper, t0) !In A^-1
+
+            H_TK = htk_diagonal_TB(crys, k, q)
 
           case (-1) !Length gauge: no-intraband appr.
             !No intraband approximation.

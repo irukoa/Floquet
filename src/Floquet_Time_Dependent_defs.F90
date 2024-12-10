@@ -1,8 +1,9 @@
 module Floquet_Time_Dependent_defs
 
   use SsTC_driver, only: expsh
+  use WannInt, only: crystal
   use Floquet_kinds, only: dp
-  use Floquet_defs, only: cmplx_0, cmplx_i
+  use Floquet_defs, only: cmplx_0, cmplx_i, pi
 
   implicit none
   private
@@ -15,6 +16,7 @@ module Floquet_Time_Dependent_defs
   public :: htk_v_3_terms
   public :: htk_v_4_terms
   public :: htk_v_5_terms
+  public :: htk_diagonal_TB
 
 contains
 
@@ -265,5 +267,74 @@ contains
       enddo
     enddo
   end function htk_v_5_terms
+
+  function htk_diagonal_TB(crys, k, q)
+    class(crystal), intent(in) :: crys
+    real(dp), intent(in) :: k(3), q(3)
+
+    complex(dp) :: htk_diagonal_TB(crys%num_bands(), crys%num_bands())
+
+    complex(dp) :: hamiltonian_elements(crys%nrpts(), crys%num_bands(), crys%num_bands())
+    complex(dp) :: berry_conn(crys%nrpts(), crys%num_bands(), crys%num_bands(), 3)
+    integer :: dg_rpts(crys%nrpts())
+
+    integer :: irpts, nrpts, rpts(crys%nrpts(), 3), &
+               n, m, &
+               address_of_first_cell, &
+               i
+    complex(dp) :: sum, site_vec(3), rtimesA
+    real(dp) :: kdotr, dlb(3, 3), dl_vector(3)
+
+    nrpts = crys%nrpts()
+    rpts = crys%rpts()
+
+    do irpts = 1, nrpts
+      if ((rpts(irpts, 1) == 0) .and. &
+          (rpts(irpts, 2) == 0) .and. &
+          (rpts(irpts, 3) == 0)) then
+        address_of_first_cell = irpts
+        exit
+      endif
+    enddo
+
+    dlb = crys%direct_lattice_basis()
+    hamiltonian_elements = crys%get_real_space_hamiltonian_elements()
+    berry_conn = crys%get_real_space_position_elements()
+    dg_rpts = crys%deg_rpts()
+
+    do n = 1, crys%num_bands()
+      do m = 1, crys%num_bands()
+
+        sum = cmplx_0
+
+        !Vector connecting site n to site m in A.
+        site_vec(:) = berry_conn(address_of_first_cell, n, n, :) - &
+                      berry_conn(address_of_first_cell, m, m, :)
+
+        do irpts = 1, nrpts
+
+          !Bravais lattice vector R in A.
+          do i = 1, 3
+            dl_vector(:) = rpts(irpts, i)*dlb(i, :)
+          enddo
+
+          kdotr = 2.0_dp*pi*dot_product(rpts(irpts, :), k)
+
+          rtimesA = dot_product(cmplx(q, 0.0_dp, dp), &
+                                (site_vec - cmplx(dl_vector, 0.0_dp, dp)))
+
+          sum = sum + &
+                exp(cmplx_i*kdotr)* &
+                exp(cmplx_i*rtimesA)* &
+                hamiltonian_elements(irpts, n, m) &
+                /real(dg_rpts(irpts), dp)
+        enddo
+
+        htk_diagonal_TB(n, m) = sum
+
+      enddo
+    enddo
+
+  end function htk_diagonal_TB
 
 end module Floquet_Time_Dependent_defs

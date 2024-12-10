@@ -79,7 +79,7 @@ contains
     if (rank == 0) write (error_unit, "(A, i0, A)") "  Number of harmonics = ", NH, "."
     if (rank == 0) write (error_unit, "(A, i0, A)") "  Number of t-points = ", NT, "."
 
-    do ic_way = -1, 4
+    do ic_way = -2, 4
 
       call tsk%build_floquet_task(crys=BC2N, &
                                   Nharm=NH, &
@@ -93,15 +93,15 @@ contains
                                   t0start=t0st, t0end=t0nd, t0steps=rndstps(8, 1), &
                                   Nt=NT, htk_calc_method=ic_way)
 
-      if ((rank == 0) .and. (ic_way == -1)) write (error_unit, "(A, i0, A)") "  Number of cont. variables = ", tsk%cdims%rank(), "."
-      if ((rank == 0) .and. (ic_way == -1)) write (error_unit, "(A)") "  Shape = "
-      if ((rank == 0) .and. (ic_way == -1)) write (error_unit, *) tsk%cdims%shape()
-      if ((rank == 0) .and. (ic_way == -1)) write (error_unit, "(A, i0, A)") "  Number of cont. variable permutations = ", &
+      if ((rank == 0) .and. (ic_way == -2)) write (error_unit, "(A, i0, A)") "  Number of cont. variables = ", tsk%cdims%rank(), "."
+      if ((rank == 0) .and. (ic_way == -2)) write (error_unit, "(A)") "  Shape = "
+      if ((rank == 0) .and. (ic_way == -2)) write (error_unit, *) tsk%cdims%shape()
+      if ((rank == 0) .and. (ic_way == -2)) write (error_unit, "(A, i0, A)") "  Number of cont. variable permutations = ", &
         tsk%cdims%size(), "."
 
       call tsk%sample(BC2N, klist, store_at, parallelization="none")
 
-      if ((rank == 0) .and. (ic_way == -1)) write (error_unit, "(A, i0, A)") "  Size of store_at = ", size(store_at), "."
+      if ((rank == 0) .and. (ic_way == -2)) write (error_unit, "(A, i0, A)") "  Size of store_at = ", size(store_at), "."
 
       if (size(store_at) /= tsk%idims%size()*tsk%cdims%size()) then
         allocate (error)
