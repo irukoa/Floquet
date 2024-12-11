@@ -302,6 +302,8 @@ contains
     berry_conn = crys%get_real_space_position_elements()
     dg_rpts = crys%deg_rpts()
 
+!$OMP     PARALLEL DO COLLAPSE (2) PRIVATE (sum, site_vec, dl_vector, kdotr, rtimesA)
+
     do n = 1, crys%num_bands()
       do m = 1, crys%num_bands()
 
@@ -311,11 +313,13 @@ contains
         site_vec(:) = berry_conn(address_of_first_cell, n, n, :) - &
                       berry_conn(address_of_first_cell, m, m, :)
 
+!$OMP         SIMD PRIVATE (dl_vector, kdotr, rtimesA) REDUCTION (+: sum)
         do irpts = 1, nrpts
 
           !Bravais lattice vector R in A.
+          dl_vector = 0.0_dp
           do i = 1, 3
-            dl_vector(:) = rpts(irpts, i)*dlb(i, :)
+            dl_vector = dl_vector + rpts(irpts, i)*dlb(i, :)
           enddo
 
           kdotr = 2.0_dp*pi*dot_product(rpts(irpts, :), k)

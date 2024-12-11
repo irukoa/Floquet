@@ -512,10 +512,10 @@ contains
 
         !Right now the effective Floquet Hamiltonian, rho and Q_s are in:
         ! - Hamiltonian basis if c_way = -1, 0.
-        ! - Wannier basis if c_way = 1, 2, 3, 4.
+        ! - Wannier basis if c_way = -2, 1, 2, 3, 4.
         !And, the momentum is in the Wannier basis.
-        !If c_way <= 0 then, we rotate the momentum to the Hamiltonian basis.
-        if (self%c_way <= 0) then
+        !If c_way = -1, 0 then, we rotate the momentum to the Hamiltonian basis.
+        if ((self%c_way == -1) .or. (self%c_way == 0)) then
           do i = 1, 3
             P1W(:, :, i) = matmul(matmul(transpose(conjg(rotH)), P1W(:, :, i)), rotH)
           enddo

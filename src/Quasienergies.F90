@@ -425,7 +425,7 @@ contains
 
         !Get effective Floquet Hamiltonian in:
         ! - Hamiltonian basis if c_way = -1, 0.
-        ! - Wannier basis if c_way = 1, 2, 3, 4.
+        ! - Wannier basis if c_way = -2, 1, 2, 3, 4.
         hf = cmplx_i*omega*logu(tev)/(2*pi)
         call diagonalize(matrix=hf, P=rot, eig=quasi)
 
