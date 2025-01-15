@@ -271,7 +271,7 @@ call tsk%build_floquet_task(crys, &
                             omegastart, omegaend, omegasteps, &
                             t0start, t0end, t0steps, &
                             lambdastart, lambdaend, lambdasteps[, &
-                            is_FS_calculation, &
+                            FS_component_calc, FS_kpt_tolerance, &
                             delta_smr, &
                             Nt, Ns, htk_calc_method])
 ```
@@ -280,7 +280,8 @@ where
 - `real(dp), intent(in) :: lambdastart` is a real number corresponding to the starting point of the frequency $\lambda$ of $j^l(\lambda)$, or $j^l_{\lambda}$ to consider in the calculation.
 - `real(dp), intent(in) :: lambdaend` is a real number corresponding to the ending point of the frequency $\lambda$ of $j^l(\lambda)$, or $j^l_{\lambda}$ to consider in the calculation.
 - `integer, intent(in) :: lambdasteps` is a positive integer, containing the number of steps in the discretization of the of the frequency $\lambda$ of $j^l(\lambda)$, or $j^l_{\lambda}$ to consider in the calculation.. The variable is discretized as all other amplitudes and phases.
-- `logical, intent(in), optional :: is_FS_calculation` is a logical flag. If `.true.`, the Fourier series component $j^l_{\lambda}$ will be calculated. If `.false.` the Fourier transform of the current $j^l(\lambda)$ will be calculated. Default is `.false.`.
+- `logical, intent(in), optional :: FS_component_calc` is a logical flag. If `.true.`, the Fourier series component $j^l_{\lambda}$ will be calculated. If `.false.` the Fourier transform of the current $j^l(\lambda)$ will be calculated. Default is `.false.`.
+- `real(dp), intent(in), optional :: FS_kpt_tolerance` is a positive real number larger than $10^{-10}$ and smaller than $1$. Represents the tolerance $\omega\times$`FS_kpt_tolerance` used to compare quasienergies for any given $\omega$ in the Fourier series $j^l_{\lambda}$ calculation. Default is `0.01`.
 - `real(dp), intent(in), optional :: delta_smr` is a positive real number $\sigma$ specifying the smearing of the resonant delta function, $\sigma \times \hbar \omega$, in eV. Default is $0.04 \times \hbar \omega$ in eV. This quantity is only relevant if `is_FS_calculation = .false.`.
 - `integer, intent(in), optional :: Ns` is a integer $N_s$ specifying the number of harmonics $s\in[-N_s, N_s]$ in the calculation of $\hat{Q}_s$ for the calculation of the Fourier components of the time-periodic operator $\hat{P}(t)$. Default is $N_s = 10$ harmonics.
 
@@ -318,6 +319,14 @@ Is called as,
 FS = tsk%is_FS_calculation()
 ```
 where `logical :: FS` is `.true.` if Fourier series components $j^l_{\lambda}$ are to be calculated and `.false.` if the Fourier transform $j^l(\lambda)$ are to be calculated.
+
+### Fourier series calculation tolerance handle
+
+Is called as,
+```fortran
+FS_tol = tsk%FS_kpt_tolerance()
+```
+where `real(dp) :: FS_tol` is the tolerance $\omega\times$`FS_kpt_tolerance` used to compare quasienergies.
 
 ### Dirac delta smearing handle
 
@@ -368,6 +377,9 @@ fpm run --example BC2N_Kpath
 ```
 ```
 fpm run --example BC2N_Current
+```
+```
+fpm run --example BC2N_BPE
 ```
 
 respectively in the repository directory.

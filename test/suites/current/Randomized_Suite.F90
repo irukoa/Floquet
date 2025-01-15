@@ -26,7 +26,8 @@ contains
     type(crystal) :: BC2N
     type(currents_calc_tsk) :: tsk
 
-    real(dp) :: klist(3, 1), rNH, omgst, omgnd, t0st, t0nd, rnt, lmdst, lmdnd, rns, rsmr, rFS
+    real(dp) :: klist(3, 1), rNH, omgst, omgnd, t0st, t0nd, rnt, lmdst, lmdnd, rns, &
+                rsmr, rFS, rFStol
     complex(dp), allocatable :: store_at(:, :, :)
     integer :: ic_way, i, j, NH, NT, NS
     logical :: FS
@@ -90,6 +91,10 @@ contains
     if (rFS < 0.5_dp) FS = .true.
     call random_number(rsmr)
     call MPI_BCAST(rsmr, 1, MPI_DOUBLE_PRECISION, 0, MPI_COMM_WORLD, ierror)
+    call random_number(rFStol)
+    rFStol = -5.0_dp + rFStol*4.0_dp
+    rFStol = 10.0_dp**(rFStol)
+    call MPI_BCAST(rFStol, 1, MPI_DOUBLE_PRECISION, 0, MPI_COMM_WORLD, ierror)
 
     if (rank == 0) write (error_unit, "(A)") "Info:"
     if (rank == 0) write (error_unit, "(A, i0, A)") "  Number of harmonics = ", NH, "."
@@ -109,12 +114,14 @@ contains
                                   omegastart=omgst, omegaend=omgnd, omegasteps=rndstps(7, 1), &
                                   t0start=t0st, t0end=t0nd, t0steps=rndstps(8, 1), &
                                   lambdastart=lmdst, lambdaend=lmdnd, lambdasteps=rndstps(9, 1), &
-                                  FS_component_calc=FS, &
+                                  FS_component_calc=FS, FS_kpt_tolerance=rFStol, &
                                   delta_smr=rsmr, &
                                   Nt=NT, Ns=NS, htk_calc_method=ic_way)
 
       if ((rank == 0) .and. (ic_way == -2)) write (error_unit, "(A, L1, A)") "  Fourier Series Calculation = ", &
         tsk%is_FS_calculation(), "."
+      if ((rank == 0) .and. (ic_way == -2)) write (error_unit, "(A, F15.8, A)") "  Fourier Series Calculation: KPT tolerance = ", &
+        tsk%FS_kpt_tolerance(), "."
       if ((rank == 0) .and. (ic_way == -2)) write (error_unit, "(A, F15.8, A)") "  Smearing = ", tsk%smr(), "."
 
       if ((rank == 0) .and. (ic_way == -2)) write (error_unit, "(A, i0, A)") "  Number of cont. variables = ", tsk%cdims%rank(), "."

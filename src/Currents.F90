@@ -27,6 +27,7 @@ module Currents
     integer :: Ns = 10
     integer :: c_way = 1
     logical :: FS_calc = .false.
+    real(dp) :: FS_kpt_tol = 0.01_dp
     real(dp) :: delta_smr = 0.04_dp
     logical :: f_initialized = .false.
   contains
@@ -37,6 +38,7 @@ module Currents
     procedure, pass(self), public :: htk_calc_method => get_c_way
     procedure, pass(self), public :: smr => get_delta_smr
     procedure, pass(self), public :: is_FS_calculation => FS_calculation
+    procedure, pass(self), public :: FS_kpt_tolerance => get_FS_kpt_tolerance
     procedure, pass(self), public :: is_floquet_initialized => f_initialized
   end type
 
@@ -53,7 +55,7 @@ contains
                          omegastart, omegaend, omegasteps, &
                          t0start, t0end, t0steps, &
                          lambdastart, lambdaend, lambdasteps, &
-                         FS_component_calc, &
+                         FS_component_calc, FS_kpt_tolerance, &
                          delta_smr, &
                          Nt, Ns, htk_calc_method)
 
@@ -80,6 +82,7 @@ contains
     integer, intent(in) :: omegasteps, t0steps, lambdasteps
 
     logical, optional, intent(in) :: FS_component_calc
+    real(dp), optional, intent(in) :: FS_kpt_tolerance
 
     real(dp), optional, intent(in) :: delta_smr
 
@@ -160,6 +163,13 @@ contains
       endif
     endif
 
+    if (present(FS_kpt_tolerance)) then
+      if ((FS_kpt_tolerance < 1.0E-10_dp) .or. (FS_kpt_tolerance > 1.0_dp)) error stop &
+        "Floquet: Error #1: FS_kpt_tolerance must be a positive real number between 1E-10 and 1."
+      self%FS_kpt_tol = FS_kpt_tolerance
+      if (.not. (self%FS_calc)) self%FS_kpt_tol = 0.0_dp
+    endif
+
     if (present(Nt)) then
       if (Nt < 1) error stop "Floquet: Error #1: Nt must be a positive integer."
       self%Nt = Nt
@@ -210,8 +220,16 @@ contains
 
   pure elemental logical function FS_calculation(self)
     class(currents_calc_tsk), intent(in) :: self
+    if (.not. self%f_initialized) error stop "Floquet: Error #2: Floquet task is not initialized."
     FS_calculation = self%FS_calc
   end function FS_calculation
+
+  pure elemental function get_FS_kpt_tolerance(self)
+    class(currents_calc_tsk), intent(in) :: self
+    real(dp) :: get_FS_kpt_tolerance
+    if (.not. self%f_initialized) error stop "Floquet: Error #2: Floquet task is not initialized."
+    get_FS_kpt_tolerance = self%FS_kpt_tol
+  end function get_FS_kpt_tolerance
 
   pure elemental logical function f_initialized(self)
     class(currents_calc_tsk), intent(in) :: self
@@ -240,6 +258,9 @@ contains
 
     integer :: Nharm, iharm, it, is, ir, i, n, m, l, p, ilambda, &
                cdims_shp(self%cdims%rank())
+
+    integer :: lambda_quotient, quasienergy_quotient
+    real(dp) :: lambda_remainder, quasienergy_remainder
 
     complex(dp) :: H_TK(crys%num_bands(), crys%num_bands()), &
                    expH_TK(crys%num_bands(), crys%num_bands()), &
@@ -562,8 +583,35 @@ contains
             !Get current.
             tmp = cmplx_0
             if (self%FS_calc) then
-              !Compute Fourier series component (withoud delta and sum over states).
-              !CODE.
+              !Compute Fourier series component (without delta and sum over states).
+              !First decompose lambda = n*omega + r, with n an integer and r\in[0, omega).
+              lambda_quotient = floor(lambda/omega)
+              lambda_remainder = modulo(lambda, omega)
+              do n = 1, crys%num_bands()
+              do m = 1, crys%num_bands()
+                !Now decompose quasi(n) - quasi(m) + omega = m*omega + q, with m = 0 or 1
+                !and q\in[0, omega).
+                quasienergy_quotient = floor((quasi(n) - quasi(m) + omega)/omega)
+                quasienergy_remainder = modulo((quasi(n) - quasi(m) + omega), omega)
+                !If q = r, the kpt contributes, else it does not and we cycle.
+                if (abs(lambda_remainder - quasienergy_remainder) > omega*self%FS_kpt_tol) cycle
+                do ir = -self%Ns, self%Ns
+                do is = -self%Ns, self%Ns
+                  !Next, the {ir, is}th combination will only contribute if
+                  !(ir -is - 1) + m = n.
+                  if (ir - is - 1 + quasienergy_quotient /= lambda_quotient) cycle
+                  !Finally, we sum for every other index.
+!$OMP                   SIMD COLLAPSE(2) REDUCTION (+: tmp)
+                  do l = 1, crys%num_bands()
+                  do p = 1, crys%num_bands()
+                    tmp = tmp + rho(n, m)*P1W(l, p, i)*conjg(qs(is, l, m))*qs(ir, p, n)
+                  enddo
+                  enddo
+!$OMP                   END SIMD
+                enddo
+                enddo
+              enddo
+              enddo
             else
               !Compute Fourier transform (with delta).
 !$OMP             SIMD COLLAPSE(6) REDUCTION (+: tmp)

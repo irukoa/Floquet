@@ -104,21 +104,35 @@ contains
     complex(dp), allocatable :: store_at(:, :)
     integer :: ic_way
 
-    reference(-2, :) = cmplx(0.0_dp, 0.0_dp, dp)
+    reference(-2, :) = [cmplx(-0.30489629607544844_dp, 0.20059940732210838_dp, dp), &
+                        cmplx(-0.12756888019115609_dp, 0.11614522288943543_dp, dp), &
+                        cmplx(6.14314150058167807E-002_dp, -2.19264376328466640E-002_dp, dp)]
 
-    reference(-1, :) = cmplx(0.0_dp, 0.0_dp, dp)
+    reference(-1, :) = [cmplx(-1.85911565633049315E-002_dp, -5.98241262704674471E-003_dp, dp), &
+                        cmplx(-6.69139363543799943E-003_dp, 3.37767376254179477E-003_dp, dp), &
+                        cmplx(-1.76825455997346639E-003_dp, 4.16662852627827304E-003_dp, dp)]
 
-    reference(0, :) = cmplx(0.0_dp, 0.0_dp, dp)
+    reference(0, :) = [cmplx(0.22298209132570049_dp, 1.04136291613247511E-002_dp, dp), &
+                       cmplx(-3.84272319743509810E-002_dp, 8.36117256310328627E-003_dp, dp), &
+                       cmplx(-1.45700112104078065E-002_dp, 2.41482394277682325E-002_dp, dp)]
 
-    reference(1, :) = cmplx(0.0_dp, 0.0_dp, dp)
+    reference(1, :) = [cmplx(0.33386128486093930_dp, 3.22554507077790695E-002_dp, dp), &
+                       cmplx(-0.18209534193236807_dp, 7.98984272500733866E-002_dp, dp), &
+                       cmplx(2.33605198826365105E-003_dp, 1.78241284182735563E-002_dp, dp)]
 
-    reference(2, :) = cmplx(0.0_dp, 0.0_dp, dp)
+    reference(2, :) = [cmplx(0.22796013336393295_dp, -0.15204354703498885_dp, dp), &
+                       cmplx(-0.18556535390910361_dp, 4.92344305953587719E-002_dp, dp), &
+                       cmplx(2.24619159388056433E-003_dp, 7.10552745165181701E-003_dp, dp)]
 
-    reference(3, :) = cmplx(0.0_dp, 0.0_dp, dp)
+    reference(3, :) = [cmplx(0.19743384744533568_dp, -0.10205789159356374_dp, dp), &
+                       cmplx(-0.17607488847049163_dp, 5.11761828120606693E-002_dp, dp), &
+                       cmplx(3.39241549714349193E-003_dp, 4.28837338995650963E-003_dp, dp)]
 
-    reference(4, :) = cmplx(0.0_dp, 0.0_dp, dp)
+    reference(4, :) = [cmplx(0.20243948477128046_dp, -0.11388164792638485_dp, dp), &
+                       cmplx(-0.17882287453082590_dp, 4.92406354171959493E-002_dp, dp), &
+                       cmplx(4.39119811134413077E-003_dp, 3.79271617321666867E-003_dp, dp)]
 
-    kpart = [2, 2, 1]![10, 10, 1]
+    kpart = [5, 5, 1]
 
     call BC2N%construct(name="BC2N", &
                         from_file="./material_data/BC2N_tb.dat", &
@@ -137,8 +151,8 @@ contains
                                   omegastart=0.5_dp, omegaend=0.5_dp, omegasteps=1, &
                                   lambdastart=2.5_dp, lambdaend=2.5_dp, lambdasteps=1, &
                                   t0start=0.0_dp, t0end=0.0_dp, t0steps=1, &
-                                  FS_component_calc=.true., &
-                                  Nt=3, Ns=12, htk_calc_method=ic_way)!Nt=513
+                                  FS_component_calc=.true., FS_kpt_tolerance=0.001_dp, &
+                                  Nt=513, Ns=12, htk_calc_method=ic_way)
 
       call tsk%sample(BC2N, kpart, store_at, parallelization="none")
 
