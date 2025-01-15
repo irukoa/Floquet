@@ -42,10 +42,10 @@ program BC2N_Current
   !Lambda: start, end, steps
   real(dp) :: lambda
   real(dp), parameter :: start = 0.0_dp, end = 10.0_dp
-  integer, parameter :: steps = 129
+  integer, parameter :: steps = 257
 
   !Sampling points discretization.
-  integer :: kpart(3) = [100, 100, 1]
+  integer :: kpart(3) = [101, 101, 101]
 
   call MPI_INIT(ierror)
 
@@ -70,8 +70,8 @@ program BC2N_Current
                               omegastart=2.5_dp, omegaend=2.5_dp, omegasteps=1, &
                               lambdastart=start, lambdaend=end, lambdasteps=steps, &
                               t0start=0.0_dp, t0end=0.0_dp, t0steps=1, &
-                              delta_smr=0.04_dp, &
-                              Nt=257, Ns=12, htk_calc_method=2)
+                              delta_smr=0.01_dp, &
+                              Nt=257, Ns=24, htk_calc_method=3)
 
   call tsk%sample(crys=BC2N, &
                   kpart=kpart, &

@@ -38,7 +38,7 @@ program BC2N_Current
   integer :: out, i
 
   !Sampling points discretization.
-  integer :: kpart(3) = [1, 1, 1]![100, 100, 1]
+  integer :: kpart(3) = [101, 101, 101]
 
   call MPI_INIT(ierror)
 
@@ -63,8 +63,8 @@ program BC2N_Current
                               omegastart=2.5_dp, omegaend=2.5_dp, omegasteps=1, &
                               lambdastart=0.0_dp, lambdaend=0.0_dp, lambdasteps=1, &
                               t0start=0.0_dp, t0end=0.0_dp, t0steps=1, &
-                              FS_component_calc=.true., &
-                              Nt=257, Ns=12, htk_calc_method=2)
+                              FS_component_calc=.true., FS_kpt_tolerance=0.001_dp, &
+                              Nt=257, Ns=24, htk_calc_method=3)
 
   call tsk%sample(crys=BC2N, &
                   kpart=kpart, &
@@ -81,7 +81,7 @@ program BC2N_Current
   store_at = store_at*16.02176634_dp
   !Lastly, we multiply by q and divide by \hbar to pass to C*J/(J*s*m^2) = Amp/m^2.
   store_at = store_at*1.602176634_dp/1.05457182_dp
-  store_at = store_at*10.0_dp**(15)
+  store_at = store_at*(10.0_dp**(15.0_dp))
 
   if (rank == 0) open (newunit=out, action="write", file="BC2N_BPE.dat", status="unknown")
   if (rank == 0) write (unit=out, fmt="(A, 2(2xES15.8))") "x component: Re, Im: ", &
