@@ -18,7 +18,7 @@ module Quasienergies
   implicit none
   private
 
-  public :: quasienergies_calc_tsk
+  public :: quasienergies_calc_tsk, quasienergy
 
   type, extends(task_specifier) :: quasienergies_calc_tsk
     private

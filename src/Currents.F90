@@ -19,13 +19,14 @@ module Currents
   implicit none
   private
 
-  public :: currents_calc_tsk
+  public :: currents_calc_tsk, current
 
   type, extends(task_specifier) :: currents_calc_tsk
     private
     integer :: Nt = 513
     integer :: Ns = 10
     integer :: c_way = 1
+    logical :: FS_calc = .false.
     real(dp) :: delta_smr = 0.04_dp
     logical :: f_initialized = .false.
   contains
@@ -35,6 +36,7 @@ module Currents
     procedure, pass(self), public :: nsharms => get_Ns
     procedure, pass(self), public :: htk_calc_method => get_c_way
     procedure, pass(self), public :: smr => get_delta_smr
+    procedure, pass(self), public :: is_FS_calculation => FS_calculation
     procedure, pass(self), public :: is_floquet_initialized => f_initialized
   end type
 
@@ -51,6 +53,7 @@ contains
                          omegastart, omegaend, omegasteps, &
                          t0start, t0end, t0steps, &
                          lambdastart, lambdaend, lambdasteps, &
+                         FS_component_calc, &
                          delta_smr, &
                          Nt, Ns, htk_calc_method)
 
@@ -75,6 +78,8 @@ contains
                             lambdastart, lambdaend
 
     integer, intent(in) :: omegasteps, t0steps, lambdasteps
+
+    logical, optional, intent(in) :: FS_component_calc
 
     real(dp), optional, intent(in) :: delta_smr
 
@@ -148,6 +153,13 @@ contains
       self%delta_smr = delta_smr
     endif
 
+    if (present(FS_component_calc)) then
+      if (FS_component_calc) then
+        self%FS_calc = .true.
+        self%delta_smr = 0.0_dp
+      endif
+    endif
+
     if (present(Nt)) then
       if (Nt < 1) error stop "Floquet: Error #1: Nt must be a positive integer."
       self%Nt = Nt
@@ -195,6 +207,11 @@ contains
     if (.not. self%f_initialized) error stop "Floquet: Error #2: Floquet task is not initialized."
     get_delta_smr = self%delta_smr
   end function get_delta_smr
+
+  pure elemental logical function FS_calculation(self)
+    class(currents_calc_tsk), intent(in) :: self
+    FS_calculation = self%FS_calc
+  end function FS_calculation
 
   pure elemental logical function f_initialized(self)
     class(currents_calc_tsk), intent(in) :: self
@@ -534,7 +551,7 @@ contains
           P1W(:, :, i) = matmul(matmul(transpose(conjg(rotF)), P1W(:, :, i)), rotF)
         enddo
 
-        !Compute the Fourier transform of the current exactly.
+        !Compute the current exactly.
         do i = 1, 3
           do ilambda = 1, cdims_shp(self%cdims%rank())
             !Iterate now over lambda.
@@ -544,22 +561,28 @@ contains
             lambda = self%cdt(var=self%cdims%rank(), step=r_arr(self%cdims%rank()))
             !Get current.
             tmp = cmplx_0
+            if (self%FS_calc) then
+              !Compute Fourier series component (withoud delta and sum over states).
+              !CODE.
+            else
+              !Compute Fourier transform (with delta).
 !$OMP             SIMD COLLAPSE(6) REDUCTION (+: tmp)
-            do n = 1, crys%num_bands()
-            do m = 1, crys%num_bands()
-            do l = 1, crys%num_bands()
-            do p = 1, crys%num_bands()
-            do ir = -self%Ns, self%Ns
-            do is = -self%Ns, self%Ns
-              tmp = tmp + rho(n, m)*P1W(l, p, i)*conjg(qs(is, l, m))*qs(ir, p, n)* &
-                    dirac_delta(quasi(n) - quasi(m) + real(ir - is, dp)*omega - lambda, smr)
-            enddo
-            enddo
-            enddo
-            enddo
-            enddo
-            enddo
+              do n = 1, crys%num_bands()
+              do m = 1, crys%num_bands()
+              do l = 1, crys%num_bands()
+              do p = 1, crys%num_bands()
+              do ir = -self%Ns, self%Ns
+              do is = -self%Ns, self%Ns
+                tmp = tmp + rho(n, m)*P1W(l, p, i)*conjg(qs(is, l, m))*qs(ir, p, n)* &
+                      dirac_delta(quasi(n) - quasi(m) + real(ir - is, dp)*omega - lambda, smr)
+              enddo
+              enddo
+              enddo
+              enddo
+              enddo
+              enddo
 !$OMP             END SIMD
+            endif
             crr(i, r_mem) = tmp
           enddo
         enddo
