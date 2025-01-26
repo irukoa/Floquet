@@ -1,7 +1,7 @@
-module Currents
+module Tdep_Currents
 
   use SsTC_driver, only: container, task_specifier, crystal, &
-    diagonalize, expsh, logu, dirac_delta
+    diagonalize, expsh, logu
   use Extrapolation_Integration, only: extrapolation
   use Floquet_kinds, only: dp
   use Floquet_defs, only: cmplx_0, cmplx_1, cmplx_i, pi
@@ -19,16 +19,17 @@ module Currents
   implicit none
   private
 
-  public :: currents_calc_tsk, current
+  !(e/\hbar)*10^{-15}. The conversion factor to convert energies
+  !\hbar\omega in eV to angular frequencies \omega in fs^{-1}
+  real(dp), parameter :: conv_factor = 1.519267449_dp
 
-  type, extends(task_specifier) :: currents_calc_tsk
+  public :: tdep_currents_calc_tsk, tdep_current
+
+  type, extends(task_specifier) :: tdep_currents_calc_tsk
     private
     integer :: Nt = 513
     integer :: Ns = 10
     integer :: c_way = 1
-    logical :: FS_calc = .false.
-    real(dp) :: FS_kpt_tol = 0.01_dp
-    real(dp) :: delta_smr = 0.04_dp
     logical :: f_initialized = .false.
   contains
     private
@@ -36,9 +37,6 @@ module Currents
     procedure, pass(self), public :: ntsteps => get_Nt
     procedure, pass(self), public :: nsharms => get_Ns
     procedure, pass(self), public :: htk_calc_method => get_c_way
-    procedure, pass(self), public :: smr => get_delta_smr
-    procedure, pass(self), public :: is_FS_calculation => FS_calculation
-    procedure, pass(self), public :: FS_kpt_tolerance => get_FS_kpt_tolerance
     procedure, pass(self), public :: is_floquet_initialized => f_initialized
   end type
 
@@ -54,12 +52,10 @@ contains
                          pzstart, pzend, pzsteps, &
                          omegastart, omegaend, omegasteps, &
                          t0start, t0end, t0steps, &
-                         lambdastart, lambdaend, lambdasteps, &
-                         FS_component_calc, FS_kpt_tolerance, &
-                         delta_smr, &
+                         tstart, tend, tsteps, &
                          Nt, Ns, htk_calc_method)
 
-    class(currents_calc_tsk), intent(out) :: self
+    class(tdep_currents_calc_tsk), intent(out) :: self
 
     type(crystal), intent(in)  :: crys
 
@@ -77,14 +73,9 @@ contains
 
     real(dp), intent(in) :: omegastart, omegaend, &
                             t0start, t0end, &
-                            lambdastart, lambdaend
+                            tstart, tend
 
-    integer, intent(in) :: omegasteps, t0steps, lambdasteps
-
-    logical, optional, intent(in) :: FS_component_calc
-    real(dp), optional, intent(in) :: FS_kpt_tolerance
-
-    real(dp), optional, intent(in) :: delta_smr
+    integer, intent(in) :: omegasteps, t0steps, tsteps
 
     integer, optional, intent(in) :: Nt, Ns, htk_calc_method
 
@@ -105,7 +96,7 @@ contains
 
     if (omegasteps < 1) error stop "Floquet: Error #1: omegasteps must be a positive integer."
     if (t0steps < 1) error stop "Floquet: Error #1: t0steps must be a positive integer."
-    if (lambdasteps < 1) error stop "Floquet: Error #1: lambdasteps must be a positive integer."
+    if (tsteps < 1) error stop "Floquet: Error #1: tsteps must be a positive integer."
 
     do iharm = 1, Nharm
       start(6*(iharm - 1) + 1) = axstart(iharm)
@@ -141,35 +132,16 @@ contains
     end(6*Nharm + 2) = omegaend
     steps(6*Nharm + 2) = omegasteps
 
-    start(6*Nharm + 3) = lambdastart
-    end(6*Nharm + 3) = lambdaend
-    steps(6*Nharm + 3) = lambdasteps
+    start(6*Nharm + 3) = tstart
+    end(6*Nharm + 3) = tend
+    steps(6*Nharm + 3) = tsteps
 
-    call self%construct(name="currents", &
+    call self%construct(name="tdep_currents", &
                         int_ind=[3], &
                         cont_data_start=start, &
                         cont_data_end=end, &
                         cont_data_steps=steps, &
-                        calculator=current)
-
-    if (present(delta_smr)) then
-      if (delta_smr < 0.0_dp) error stop "Floquet: Error #1: delta_smr must be positive and real."
-      self%delta_smr = delta_smr
-    endif
-
-    if (present(FS_component_calc)) then
-      if (FS_component_calc) then
-        self%FS_calc = .true.
-        self%delta_smr = 0.0_dp
-      endif
-    endif
-
-    if (present(FS_kpt_tolerance)) then
-      if ((FS_kpt_tolerance < 1.0E-10_dp) .or. (FS_kpt_tolerance > 1.0_dp)) error stop &
-        "Floquet: Error #1: FS_kpt_tolerance must be a positive real number between 1E-10 and 1."
-      self%FS_kpt_tol = FS_kpt_tolerance
-      if (.not. (self%FS_calc)) self%FS_kpt_tol = 0.0_dp
-    endif
+                        calculator=tdep_current)
 
     if (present(Nt)) then
       if (Nt < 1) error stop "Floquet: Error #1: Nt must be a positive integer."
@@ -195,49 +167,29 @@ contains
   end subroutine
 
   pure elemental integer function get_Nt(self)
-    class(currents_calc_tsk), intent(in) :: self
+    class(tdep_currents_calc_tsk), intent(in) :: self
     if (.not. self%f_initialized) error stop "Floquet: Error #2: Floquet task is not initialized."
     get_Nt = self%Nt
   end function get_Nt
 
   pure elemental integer function get_Ns(self)
-    class(currents_calc_tsk), intent(in) :: self
+    class(tdep_currents_calc_tsk), intent(in) :: self
     if (.not. self%f_initialized) error stop "Floquet: Error #2: Floquet task is not initialized."
     get_Ns = self%Ns
   end function get_Ns
 
   pure elemental integer function get_c_way(self)
-    class(currents_calc_tsk), intent(in) :: self
+    class(tdep_currents_calc_tsk), intent(in) :: self
     if (.not. self%f_initialized) error stop "Floquet: Error #2: Floquet task is not initialized."
     get_c_way = self%c_way
   end function get_c_way
 
-  pure elemental function get_delta_smr(self)
-    class(currents_calc_tsk), intent(in) :: self
-    real(dp) :: get_delta_smr
-    if (.not. self%f_initialized) error stop "Floquet: Error #2: Floquet task is not initialized."
-    get_delta_smr = self%delta_smr
-  end function get_delta_smr
-
-  pure elemental logical function FS_calculation(self)
-    class(currents_calc_tsk), intent(in) :: self
-    if (.not. self%f_initialized) error stop "Floquet: Error #2: Floquet task is not initialized."
-    FS_calculation = self%FS_calc
-  end function FS_calculation
-
-  pure elemental function get_FS_kpt_tolerance(self)
-    class(currents_calc_tsk), intent(in) :: self
-    real(dp) :: get_FS_kpt_tolerance
-    if (.not. self%f_initialized) error stop "Floquet: Error #2: Floquet task is not initialized."
-    get_FS_kpt_tolerance = self%FS_kpt_tol
-  end function get_FS_kpt_tolerance
-
   pure elemental logical function f_initialized(self)
-    class(currents_calc_tsk), intent(in) :: self
+    class(tdep_currents_calc_tsk), intent(in) :: self
     f_initialized = self%f_initialized
   end function f_initialized
 
-  function current(self, crys, k, other) result(crr)
+  function tdep_Current(self, crys, k, other) result(crr)
     class(task_specifier), intent(in) :: self
     class(crystal), intent(in) :: crys
     real(dp), intent(in) :: k(3)
@@ -248,20 +200,16 @@ contains
     integer :: r_mem, rp_mem, r_arr(self%cdims%rank()), &
                i_mem
 
-    real(dp) :: omega, t0, lambda, dt, &
+    real(dp) :: omega, t0, time, dt, &
                 tper, q(3), &
                 quasi(crys%num_bands()), &
-                eig(crys%num_bands()), &
-                smr
+                eig(crys%num_bands())
 
     real(dp), allocatable :: amplitudes(:, :), &
                              phases(:, :)
 
-    integer :: Nharm, iharm, it, is, ir, i, n, m, l, p, ilambda, &
+    integer :: Nharm, iharm, it, is, ir, i, n, m, l, p, i_ext_time, &
                cdims_shp(self%cdims%rank())
-
-    integer :: lambda_quotient, quasienergy_quotient
-    real(dp) :: lambda_remainder, quasienergy_remainder
 
     complex(dp) :: H_TK(crys%num_bands(), crys%num_bands()), &
                    expH_TK(crys%num_bands(), crys%num_bands()), &
@@ -308,7 +256,7 @@ contains
     enddo
 
     select type (self)
-    type is (currents_calc_tsk)
+    type is (tdep_currents_calc_tsk)
       if (.not. self%f_initialized) error stop "Floquet: Error #2: Floquet task is not initialized."
       !Gather required quantities depending on the method to calculate H(k, t).
       select case (self%c_way)
@@ -406,21 +354,19 @@ contains
       allocate (qs(-self%Ns:self%Ns, crys%num_bands(), crys%num_bands()))
 
       !Here we create a partial permutation dictionary,
-      !iterating for all variables except lambda.
+      !iterating for all variables except time.
       allocate (dims(self%cdims%rank() - 1))
       do i = 1, size(dims)
         dims(i) = i
       enddo
       pperm = self%cdims%partial_permutation(dims)
 
-      !Loop for each external variable except lambda.
+      !Loop for each external variable except time.
       do rp_mem = 1, size(pperm(:, 1))
 
         r_arr = pperm(rp_mem, :)
 
         omega = self%cdt(var=self%cdims%rank() - 1, step=r_arr(self%cdims%rank() - 1))
-
-        smr = self%delta_smr*omega !Adaptive delta smearing, proportional to omega.
 
         t0 = self%cdt(var=self%cdims%rank() - 2, step=r_arr(self%cdims%rank() - 2))
 
@@ -575,63 +521,31 @@ contains
 
         !Compute the current exactly.
         do i = 1, 3
-          do ilambda = 1, cdims_shp(self%cdims%rank())
-            !Iterate now over lambda.
-            r_arr(self%cdims%rank()) = ilambda
-            !Get memory layout index and lambda.
+          do i_ext_time = 1, cdims_shp(self%cdims%rank())
+            !Iterate now over time.
+            r_arr(self%cdims%rank()) = i_ext_time
+            !Get memory layout index and time.
             r_mem = self%cdims%ind(r_arr)
-            lambda = self%cdt(var=self%cdims%rank(), step=r_arr(self%cdims%rank()))
+            time = self%cdt(var=self%cdims%rank(), step=r_arr(self%cdims%rank()))
             !Get current.
             tmp = cmplx_0
-            if (self%FS_calc) then
-              !Compute Fourier series component (without delta and sum over states).
-              !First decompose lambda = n*omega + r, with n an integer and r\in[0, omega).
-              lambda_quotient = floor(lambda/omega)
-              lambda_remainder = modulo(lambda, omega)
-              do n = 1, crys%num_bands()
-              do m = 1, crys%num_bands()
-                !Now decompose quasi(n) - quasi(m) + omega = m*omega + q, with m = 0 or 1
-                !and q\in[0, omega).
-                quasienergy_quotient = floor((quasi(n) - quasi(m) + omega)/omega)
-                quasienergy_remainder = modulo((quasi(n) - quasi(m) + omega), omega)
-                !If q = r, the kpt contributes, else it does not and we cycle.
-                if (abs(lambda_remainder - quasienergy_remainder) > omega*self%FS_kpt_tol) cycle
-                do ir = -self%Ns, self%Ns
-                do is = -self%Ns, self%Ns
-                  !Next, the {ir, is}th combination will only contribute if
-                  !(ir -is - 1) + m = n.
-                  if (ir - is - 1 + quasienergy_quotient /= lambda_quotient) cycle
-                  !Finally, we sum for every other index.
-!$OMP                   SIMD COLLAPSE(2) REDUCTION (+: tmp)
-                  do l = 1, crys%num_bands()
-                  do p = 1, crys%num_bands()
-                    tmp = tmp + rho(n, m)*P1W(l, p, i)*conjg(qs(is, l, m))*qs(ir, p, n)
-                  enddo
-                  enddo
-!$OMP                   END SIMD
-                enddo
-                enddo
-              enddo
-              enddo
-            else
-              !Compute Fourier transform (with delta).
+            !Compute time evolution. We expect the time in fs (femto seconds).
 !$OMP             SIMD COLLAPSE(6) REDUCTION (+: tmp)
-              do n = 1, crys%num_bands()
-              do m = 1, crys%num_bands()
-              do l = 1, crys%num_bands()
-              do p = 1, crys%num_bands()
-              do ir = -self%Ns, self%Ns
-              do is = -self%Ns, self%Ns
-                tmp = tmp + rho(n, m)*P1W(l, p, i)*conjg(qs(is, l, m))*qs(ir, p, n)* &
-                      dirac_delta(quasi(n) - quasi(m) + real(ir - is, dp)*omega - lambda, smr)
-              enddo
-              enddo
-              enddo
-              enddo
-              enddo
-              enddo
+            do n = 1, crys%num_bands()
+            do m = 1, crys%num_bands()
+            do l = 1, crys%num_bands()
+            do p = 1, crys%num_bands()
+            do ir = -self%Ns, self%Ns
+            do is = -self%Ns, self%Ns
+              tmp = tmp + rho(n, m)*P1W(l, p, i)*conjg(qs(is, l, m))*qs(ir, p, n)* &
+                    exp(-cmplx_i*(quasi(n) - quasi(m) + real(ir - is, dp)*omega)*time*conv_factor)
+            enddo
+            enddo
+            enddo
+            enddo
+            enddo
+            enddo
 !$OMP             END SIMD
-            endif
             crr(i, r_mem) = tmp
           enddo
         enddo
@@ -642,6 +556,6 @@ contains
 
     end select
 
-  end function current
+  end function tdep_current
 
-end module Currents
+end module Tdep_Currents

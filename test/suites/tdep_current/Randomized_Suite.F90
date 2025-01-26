@@ -1,11 +1,11 @@
-module C_Randomized_Suite
+module TC_Randomized_Suite
   use, intrinsic :: iso_fortran_env, only: error_unit
   use MPI
   use OMP_LIB
 
   use Floquet_kinds, only: dp
   use Floquet_defs, only: pi
-  use Currents, only: currents_calc_tsk
+  use Tdep_Currents, only: tdep_currents_calc_tsk
   use WannInt, only: crystal
 
   use testdrive, only: error_type
@@ -24,13 +24,11 @@ contains
     type(error_type), allocatable, intent(out) :: error
 
     type(crystal) :: BC2N
-    type(currents_calc_tsk) :: tsk
+    type(tdep_currents_calc_tsk) :: tsk
 
-    real(dp) :: klist(3, 1), rNH, omgst, omgnd, t0st, t0nd, rnt, lmdst, lmdnd, rns, &
-                rsmr, rFS, rFStol
+    real(dp) :: klist(3, 1), rNH, omgst, omgnd, t0st, t0nd, rnt, tst, tnd, rns
     complex(dp), allocatable :: store_at(:, :, :)
     integer :: ic_way, i, j, NH, NT, NS
-    logical :: FS
 
     real(dp), allocatable :: rndff(:, :), rrndstps(:, :)
     integer, allocatable :: rndstps(:, :)
@@ -72,12 +70,12 @@ contains
     call random_number(t0nd)
     t0nd = (2*pi/omgst)*t0nd
     call MPI_BCAST(t0nd, 1, MPI_DOUBLE_PRECISION, 0, MPI_COMM_WORLD, ierror)
-    call random_number(lmdst)
-    lmdst = 0.05_dp + 3.15_dp*lmdst
-    call MPI_BCAST(lmdst, 1, MPI_DOUBLE_PRECISION, 0, MPI_COMM_WORLD, ierror)
-    call random_number(lmdnd)
-    lmdnd = 0.05_dp + 3.15_dp*lmdnd
-    call MPI_BCAST(lmdnd, 1, MPI_DOUBLE_PRECISION, 0, MPI_COMM_WORLD, ierror)
+    call random_number(tst)
+    tst = 0.05_dp + 3.15_dp*tst
+    call MPI_BCAST(tst, 1, MPI_DOUBLE_PRECISION, 0, MPI_COMM_WORLD, ierror)
+    call random_number(tnd)
+    tnd = 0.05_dp + 3.15_dp*tnd
+    call MPI_BCAST(tnd, 1, MPI_DOUBLE_PRECISION, 0, MPI_COMM_WORLD, ierror)
     call random_number(rnt)
     NT = 2**(nint(1.0_dp + 9.0_dp*rnt)) + 1
     !NT = 2**(9) + 1 !DBG.
@@ -86,15 +84,6 @@ contains
     NS = nint(1.0_dp + 14.0_dp*rns)
     !NS = 15 !DBG.
     call MPI_BCAST(NS, 1, MPI_INTEGER, 0, MPI_COMM_WORLD, ierror)
-    call random_number(rFS)
-    call MPI_BCAST(rFS, 1, MPI_DOUBLE_PRECISION, 0, MPI_COMM_WORLD, ierror)
-    if (rFS < 0.5_dp) FS = .true.
-    call random_number(rsmr)
-    call MPI_BCAST(rsmr, 1, MPI_DOUBLE_PRECISION, 0, MPI_COMM_WORLD, ierror)
-    call random_number(rFStol)
-    rFStol = -5.0_dp + rFStol*4.0_dp
-    rFStol = 10.0_dp**(rFStol)
-    call MPI_BCAST(rFStol, 1, MPI_DOUBLE_PRECISION, 0, MPI_COMM_WORLD, ierror)
 
     if (rank == 0) write (error_unit, "(A)") "Info:"
     if (rank == 0) write (error_unit, "(A, i0, A)") "  Number of harmonics = ", NH, "."
@@ -113,16 +102,8 @@ contains
                                   pzstart=rndff(11, :), pzend=rndff(12, :), pzsteps=rndstps(6, :), &
                                   omegastart=omgst, omegaend=omgnd, omegasteps=rndstps(7, 1), &
                                   t0start=t0st, t0end=t0nd, t0steps=rndstps(8, 1), &
-                                  lambdastart=lmdst, lambdaend=lmdnd, lambdasteps=rndstps(9, 1), &
-                                  FS_component_calc=FS, FS_kpt_tolerance=rFStol, &
-                                  delta_smr=rsmr, &
+                                  tstart=tst, tend=tnd, tsteps=rndstps(9, 1), &
                                   Nt=NT, Ns=NS, htk_calc_method=ic_way)
-
-      if ((rank == 0) .and. (ic_way == -2)) write (error_unit, "(A, L1, A)") "  Fourier Series Calculation = ", &
-        tsk%is_FS_calculation(), "."
-      if ((rank == 0) .and. (ic_way == -2)) write (error_unit, "(A, F15.8, A)") "  Fourier Series Calculation: KPT tolerance = ", &
-        tsk%FS_kpt_tolerance(), "."
-      if ((rank == 0) .and. (ic_way == -2)) write (error_unit, "(A, F15.8, A)") "  Smearing = ", tsk%smr(), "."
 
       if ((rank == 0) .and. (ic_way == -2)) write (error_unit, "(A, i0, A)") "  Number of cont. variables = ", tsk%cdims%rank(), "."
       if ((rank == 0) .and. (ic_way == -2)) write (error_unit, "(A)") "  Shape = "
@@ -155,4 +136,4 @@ contains
 
   end subroutine randomized_input_parameters
 
-end module C_Randomized_Suite
+end module TC_Randomized_Suite

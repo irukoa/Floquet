@@ -6,6 +6,7 @@ program main
   use SsTC_driver_comms
   use Quasienergies
   use Currents
+  use Tdep_Currents
 
   implicit none
 

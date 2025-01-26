@@ -11,6 +11,8 @@ program driver
   use C_Functionality_Suite, only: C_FT_fnc => get_current_FT_of_BC2N, &
     C_FS_fnc => get_current_FS_of_BC2N
   use C_Randomized_Suite, only: C_rnd => randomized_input_parameters
+  use TC_Functionality_Suite, only: TC_fnc => get_tdep_current_of_BC2N
+  use TC_Randomized_Suite, only: TC_rnd => randomized_input_parameters
 
   implicit none
 
@@ -43,6 +45,7 @@ program driver
     if (allocated(error)) error stop "Test (1/1): FAILED."
   endif
   if (rank == 0) write (error_unit, "(A)") "Test (1/1): PASSED."
+
   if (rank == 0) write (error_unit, "(A)") "Testing: Currents module:"
 
   if (rank == 0) write (error_unit, "(A)") "Suite: Functionality Suite:"
@@ -68,6 +71,28 @@ program driver
   if (rank == 0) write (error_unit, "(A)") &
     "Test (1/1): Testing for runtime errors and NaN/Infinity. Random driving parameters."
   call C_rnd(error)
+  if (rank == 0) then
+    if (allocated(error)) error stop "Test (1/1): FAILED."
+  endif
+  if (rank == 0) write (error_unit, "(A)") "Test (1/1): PASSED."
+
+  if (rank == 0) write (error_unit, "(A)") "Testing: Time-Dependent Currents module:"
+
+  if (rank == 0) write (error_unit, "(A)") "Suite: Functionality Suite:"
+
+  if (rank == 0) write (error_unit, "(A)") &
+    "Test (1/1): Testing time dependent current of BC2N. Comparing with reference."
+  call TC_fnc(error)
+  if (rank == 0) then
+    if (allocated(error)) error stop "Test (1/1): FAILED."
+  endif
+  if (rank == 0) write (error_unit, "(A)") "Test (1/1): PASSED."
+
+  if (rank == 0) write (error_unit, "(A)") "Suite: Randomized Suite:"
+
+  if (rank == 0) write (error_unit, "(A)") &
+    "Test (1/1): Testing for runtime errors and NaN/Infinity. Random driving parameters."
+  call TC_rnd(error)
   if (rank == 0) then
     if (allocated(error)) error stop "Test (1/1): FAILED."
   endif
