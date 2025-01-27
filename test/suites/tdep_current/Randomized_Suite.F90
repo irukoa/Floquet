@@ -26,7 +26,8 @@ contains
     type(crystal) :: BC2N
     type(tdep_currents_calc_tsk) :: tsk
 
-    real(dp) :: klist(3, 1), rNH, omgst, omgnd, t0st, t0nd, rnt, tst, tnd, rns
+    real(dp) :: klist(3, 1), rNH, omgst, omgnd, t0st, t0nd, rnt, tst, tnd, rns, &
+                rEwin
     complex(dp), allocatable :: store_at(:, :, :)
     integer :: ic_way, i, j, NH, NT, NS
 
@@ -84,6 +85,9 @@ contains
     NS = nint(1.0_dp + 14.0_dp*rns)
     !NS = 15 !DBG.
     call MPI_BCAST(NS, 1, MPI_INTEGER, 0, MPI_COMM_WORLD, ierror)
+    call random_number(rEwin)
+    rEwin = rEwin*huge(1.0_dp)
+    call MPI_BCAST(rEwin, 1, MPI_DOUBLE_PRECISION, 0, MPI_COMM_WORLD, ierror)
 
     if (rank == 0) write (error_unit, "(A)") "Info:"
     if (rank == 0) write (error_unit, "(A, i0, A)") "  Number of harmonics = ", NH, "."
@@ -103,6 +107,7 @@ contains
                                   omegastart=omgst, omegaend=omgnd, omegasteps=rndstps(7, 1), &
                                   t0start=t0st, t0end=t0nd, t0steps=rndstps(8, 1), &
                                   tstart=tst, tend=tnd, tsteps=rndstps(9, 1), &
+                                  Energy_window=rEwin, &
                                   Nt=NT, Ns=NS, htk_calc_method=ic_way)
 
       if ((rank == 0) .and. (ic_way == -2)) write (error_unit, "(A, i0, A)") "  Number of cont. variables = ", tsk%cdims%rank(), "."

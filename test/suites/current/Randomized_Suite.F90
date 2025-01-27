@@ -27,7 +27,7 @@ contains
     type(currents_calc_tsk) :: tsk
 
     real(dp) :: klist(3, 1), rNH, omgst, omgnd, t0st, t0nd, rnt, lmdst, lmdnd, rns, &
-                rsmr, rFS, rFStol
+                rsmr, rFS, rFStol, rEwin
     complex(dp), allocatable :: store_at(:, :, :)
     integer :: ic_way, i, j, NH, NT, NS
     logical :: FS
@@ -95,6 +95,9 @@ contains
     rFStol = -5.0_dp + rFStol*4.0_dp
     rFStol = 10.0_dp**(rFStol)
     call MPI_BCAST(rFStol, 1, MPI_DOUBLE_PRECISION, 0, MPI_COMM_WORLD, ierror)
+    call random_number(rEwin)
+    rEwin = rEwin*huge(1.0_dp)
+    call MPI_BCAST(rEwin, 1, MPI_DOUBLE_PRECISION, 0, MPI_COMM_WORLD, ierror)
 
     if (rank == 0) write (error_unit, "(A)") "Info:"
     if (rank == 0) write (error_unit, "(A, i0, A)") "  Number of harmonics = ", NH, "."
@@ -116,6 +119,7 @@ contains
                                   lambdastart=lmdst, lambdaend=lmdnd, lambdasteps=rndstps(9, 1), &
                                   FS_component_calc=FS, FS_kpt_tolerance=rFStol, &
                                   delta_smr=rsmr, &
+                                  Energy_window=rEwin, &
                                   Nt=NT, Ns=NS, htk_calc_method=ic_way)
 
       if ((rank == 0) .and. (ic_way == -2)) write (error_unit, "(A, L1, A)") "  Fourier Series Calculation = ", &

@@ -279,6 +279,7 @@ call tsk%build_floquet_task(crys, &
                             lambdastart, lambdaend, lambdasteps[, &
                             FS_component_calc, FS_kpt_tolerance, &
                             delta_smr, &
+                            Energy_window, &
                             Nt, Ns, htk_calc_method])
 ```
 where
@@ -289,6 +290,7 @@ where
 - `logical, intent(in), optional :: FS_component_calc` is a logical flag. If `.true.`, the Fourier series component $j^l_{\lambda}$ will be calculated. If `.false.` the Fourier transform of the current $j^l(\lambda)$ will be calculated. Default is `.false.`.
 - `real(dp), intent(in), optional :: FS_kpt_tolerance` is a positive real number larger than $10^{-10}$ and smaller than $1$. Represents the tolerance $\omega\times$`FS_kpt_tolerance` used to compare quasienergies for any given $\omega$ in the Fourier series $j^l_{\lambda}$ calculation. Default is `0.01`.
 - `real(dp), intent(in), optional :: delta_smr` is a positive real number $\sigma$ specifying the smearing of the resonant delta function, $\sigma \times \hbar \omega$, in eV. Default is $0.04 \times \hbar \omega$ in eV. This quantity is only relevant if `is_FS_calculation = .false.`.
+- `real(dp), intent(in), optional :: Energy_window` is a positive real number $\Delta E$ in eV specifying the cutoff energy for virtual Floquet resonances. A Floquet resonance of energy $E$ will be included if $|E|<\Delta E$. Default is `huge(1.0_dp)` (infinite).
 - `integer, intent(in), optional :: Ns` is a integer $N_s$ specifying the number of harmonics $s\in[-N_s, N_s]$ in the calculation of $\hat{Q}_s$ for the calculation of the Fourier components of the time-periodic operator $\hat{P}(t)$. Default is $N_s = 10$ harmonics.
 
 ### Integer and continuous indices
@@ -342,6 +344,14 @@ smr = tsk%smr()
 ```
 where `real(dp) :: smr` is the smearing $\sigma$ of the Dirac delta function, $\sigma \times \hbar \omega$, employed in the calculation in units of eV.
 
+### Energy window handle
+
+Is called as,
+```fortran
+Ewin = tsk%Energy_window()
+```
+where `real(dp) :: Ewin` is the energy window $\Delta E$ employed in the calculation in units of eV.
+
 </details>
 
 <details>
@@ -364,6 +374,7 @@ call tsk%build_floquet_task(crys, &
                             omegastart, omegaend, omegasteps, &
                             t0start, t0end, t0steps, &
                             tstart, tend, tsteps[, &
+                            Energy_window, &
                             Nt, Ns, htk_calc_method])
 ```
 where

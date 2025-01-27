@@ -29,6 +29,7 @@ module Currents
     logical :: FS_calc = .false.
     real(dp) :: FS_kpt_tol = 0.01_dp
     real(dp) :: delta_smr = 0.04_dp
+    real(dp) :: E_win = huge(1.0_dp)
     logical :: f_initialized = .false.
   contains
     private
@@ -39,6 +40,7 @@ module Currents
     procedure, pass(self), public :: smr => get_delta_smr
     procedure, pass(self), public :: is_FS_calculation => FS_calculation
     procedure, pass(self), public :: FS_kpt_tolerance => get_FS_kpt_tolerance
+    procedure, pass(self), public :: Energy_window => get_Energy_window
     procedure, pass(self), public :: is_floquet_initialized => f_initialized
   end type
 
@@ -57,6 +59,7 @@ contains
                          lambdastart, lambdaend, lambdasteps, &
                          FS_component_calc, FS_kpt_tolerance, &
                          delta_smr, &
+                         Energy_window, &
                          Nt, Ns, htk_calc_method)
 
     class(currents_calc_tsk), intent(out) :: self
@@ -85,6 +88,8 @@ contains
     real(dp), optional, intent(in) :: FS_kpt_tolerance
 
     real(dp), optional, intent(in) :: delta_smr
+
+    real(dp), optional, intent(in) :: Energy_window
 
     integer, optional, intent(in) :: Nt, Ns, htk_calc_method
 
@@ -171,6 +176,12 @@ contains
       if (.not. (self%FS_calc)) self%FS_kpt_tol = 0.0_dp
     endif
 
+    if (present(Energy_window)) then
+      if (Energy_window < 0.0_dp) error stop &
+        "Floquet: Error #1: Energy_window must be a positive real number."
+      self%E_win = Energy_window
+    endif
+
     if (present(Nt)) then
       if (Nt < 1) error stop "Floquet: Error #1: Nt must be a positive integer."
       self%Nt = Nt
@@ -231,6 +242,13 @@ contains
     if (.not. self%f_initialized) error stop "Floquet: Error #2: Floquet task is not initialized."
     get_FS_kpt_tolerance = self%FS_kpt_tol
   end function get_FS_kpt_tolerance
+
+  pure elemental function get_Energy_window(self)
+    class(currents_calc_tsk), intent(in) :: self
+    real(dp) :: get_Energy_window
+    if (.not. self%f_initialized) error stop "Floquet: Error #2: Floquet task is not initialized."
+    get_Energy_window = self%E_win
+  end function get_Energy_window
 
   pure elemental logical function f_initialized(self)
     class(currents_calc_tsk), intent(in) :: self
@@ -615,22 +633,24 @@ contains
               enddo
             else
               !Compute Fourier transform (with delta).
-!$OMP             SIMD COLLAPSE(6) REDUCTION (+: tmp)
               do n = 1, crys%num_bands()
               do m = 1, crys%num_bands()
-              do l = 1, crys%num_bands()
-              do p = 1, crys%num_bands()
-              do ir = -self%Ns, self%Ns
-              do is = -self%Ns, self%Ns
-                tmp = tmp + rho(n, m)*P1W(l, p, i)*conjg(qs(is, l, m))*qs(ir, p, n)* &
-                      dirac_delta(quasi(n) - quasi(m) + real(ir - is, dp)*omega - lambda, smr)
-              enddo
-              enddo
-              enddo
-              enddo
-              enddo
-              enddo
+                do ir = -self%Ns, self%Ns
+                do is = -self%Ns, self%Ns
+                  !Try avoiding nonexistent resonances invorving transitions of energies higher than energy window.
+                  if (abs(quasi(n) - quasi(m) + real(ir - is, dp)*omega) > self%E_win) cycle
+!$OMP                   SIMD COLLAPSE(2) REDUCTION (+: tmp)
+                  do l = 1, crys%num_bands()
+                  do p = 1, crys%num_bands()
+                    tmp = tmp + rho(n, m)*P1W(l, p, i)*conjg(qs(is, l, m))*qs(ir, p, n)* &
+                          dirac_delta(quasi(n) - quasi(m) + real(ir - is, dp)*omega - lambda, smr)
+                  enddo
+                  enddo
 !$OMP             END SIMD
+                enddo
+                enddo
+              enddo
+              enddo
             endif
             crr(i, r_mem) = tmp
           enddo

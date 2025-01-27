@@ -30,6 +30,7 @@ module Tdep_Currents
     integer :: Nt = 513
     integer :: Ns = 10
     integer :: c_way = 1
+    real(dp) :: E_win = huge(1.0_dp)
     logical :: f_initialized = .false.
   contains
     private
@@ -37,6 +38,7 @@ module Tdep_Currents
     procedure, pass(self), public :: ntsteps => get_Nt
     procedure, pass(self), public :: nsharms => get_Ns
     procedure, pass(self), public :: htk_calc_method => get_c_way
+    procedure, pass(self), public :: Energy_window => get_Energy_window
     procedure, pass(self), public :: is_floquet_initialized => f_initialized
   end type
 
@@ -53,6 +55,7 @@ contains
                          omegastart, omegaend, omegasteps, &
                          t0start, t0end, t0steps, &
                          tstart, tend, tsteps, &
+                         Energy_window, &
                          Nt, Ns, htk_calc_method)
 
     class(tdep_currents_calc_tsk), intent(out) :: self
@@ -76,6 +79,8 @@ contains
                             tstart, tend
 
     integer, intent(in) :: omegasteps, t0steps, tsteps
+
+    real(dp), optional, intent(in) :: Energy_window
 
     integer, optional, intent(in) :: Nt, Ns, htk_calc_method
 
@@ -143,6 +148,12 @@ contains
                         cont_data_steps=steps, &
                         calculator=tdep_current)
 
+    if (present(Energy_window)) then
+      if (Energy_window < 0.0_dp) error stop &
+        "Floquet: Error #1: Energy_window must be a positive real number."
+      self%E_win = Energy_window
+    endif
+
     if (present(Nt)) then
       if (Nt < 1) error stop "Floquet: Error #1: Nt must be a positive integer."
       self%Nt = Nt
@@ -183,6 +194,13 @@ contains
     if (.not. self%f_initialized) error stop "Floquet: Error #2: Floquet task is not initialized."
     get_c_way = self%c_way
   end function get_c_way
+
+  pure elemental function get_Energy_window(self)
+    class(tdep_currents_calc_tsk), intent(in) :: self
+    real(dp) :: get_Energy_window
+    if (.not. self%f_initialized) error stop "Floquet: Error #2: Floquet task is not initialized."
+    get_Energy_window = self%E_win
+  end function get_Energy_window
 
   pure elemental logical function f_initialized(self)
     class(tdep_currents_calc_tsk), intent(in) :: self
@@ -530,22 +548,24 @@ contains
             !Get current.
             tmp = cmplx_0
             !Compute time evolution. We expect the time in fs (femto seconds).
-!$OMP             SIMD COLLAPSE(6) REDUCTION (+: tmp)
             do n = 1, crys%num_bands()
             do m = 1, crys%num_bands()
-            do l = 1, crys%num_bands()
-            do p = 1, crys%num_bands()
-            do ir = -self%Ns, self%Ns
-            do is = -self%Ns, self%Ns
-              tmp = tmp + rho(n, m)*P1W(l, p, i)*conjg(qs(is, l, m))*qs(ir, p, n)* &
-                    exp(-cmplx_i*(quasi(n) - quasi(m) + real(ir - is, dp)*omega)*time*conv_factor)
+              do ir = -self%Ns, self%Ns
+              do is = -self%Ns, self%Ns
+                !Try avoiding nonexistent resonances invorving transitions of energies higher than energy window.
+                if (abs(quasi(n) - quasi(m) + real(ir - is, dp)*omega) > self%E_win) cycle
+!$OMP                   SIMD COLLAPSE(2) REDUCTION (+: tmp)
+                do l = 1, crys%num_bands()
+                do p = 1, crys%num_bands()
+                  tmp = tmp + rho(n, m)*P1W(l, p, i)*conjg(qs(is, l, m))*qs(ir, p, n)* &
+                        exp(-cmplx_i*(quasi(n) - quasi(m) + real(ir - is, dp)*omega)*time*conv_factor)
+                enddo
+                enddo
+!$OMP                             END SIMD
+              enddo
+              enddo
             enddo
             enddo
-            enddo
-            enddo
-            enddo
-            enddo
-!$OMP             END SIMD
             crr(i, r_mem) = tmp
           enddo
         enddo
