@@ -487,7 +487,7 @@ contains
           expH_TK = expsh(-cmplx_i*dt*H_TK)
 
           !Accumulate.
-          tev(:, :, it) = matmul(tev(:, :, it - 1), expH_TK)
+          tev(:, :, it) = matmul(expH_TK, tev(:, :, it - 1))
 
         enddo
 

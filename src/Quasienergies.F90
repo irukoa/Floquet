@@ -403,7 +403,7 @@ contains
 
             H_TK = htk_v_4_terms(HW, P1W, P2W, P3W, q) !In eV.
 
-          case (4) !Velocity gauge: 4 terms in expansion.
+          case (4) !Velocity gauge: 5 terms in expansion.
             !The interaction term is V(t) = e*Q(t)*p/m + \sum_{ij} e^2*Q_j(t)*Q_i(t)*[D^j, [D^i, H]]/2\hbar^2 +
             !\sum_{ijl} e^3*Q_l(t)*Q_j(t)*Q_i(t)*[D^l, [D^j, [D^i, H]]]/6\hbar^3 +
             !\sum_{ijlo} e^4*Q_o(t)*Q_l(t)*Q_j(t)*Q_i(t)*[D^o, [D^l, [D^j, [D^i, H]]]]/24\hbar^4
@@ -419,7 +419,7 @@ contains
           expH_TK = expsh(-cmplx_i*dt*H_TK)
 
           !Accumulate.
-          tev = matmul(tev, expH_TK)
+          tev = matmul(expH_TK, tev)
 
         enddo
 
